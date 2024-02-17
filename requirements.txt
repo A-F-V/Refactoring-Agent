@@ -1,0 +1,16 @@
+
+# For linting
+pylint
+
+# For Formatting
+black
+
+# For Testing
+pytest
+
+# For Documentation
+sphinx
+
+# For Type Checking
+mypy
+
