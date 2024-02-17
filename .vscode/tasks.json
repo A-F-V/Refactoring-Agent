@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "TypeCheck",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/bin/python",
+            "args": [
+                "-m",
+                "mypy",
+                "${workspaceFolder}",
+                "--exclude",
+                "demo",
+                "--ignore-missing-imports"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}

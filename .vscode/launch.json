@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: CLI",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/cli.py",
+            "args": [
+                "init-repo"
+            ],
+            "console": "integratedTerminal",
+            "preLaunchTask": "TypeCheck"
+        }
+    ]
+}

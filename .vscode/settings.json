@@ -1,0 +1,28 @@
+{
+    // Type Checking
+    "python.analysis.typeCheckingMode": "strict",
+    "[python]": {
+        // Style Formatting
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.formatOnSave": true,
+    },
+    // Pylint Settings
+    // Linting
+    "pylint.enabled": true,
+    "pylint.args": [
+        "--rcfile=${workspaceFolder}/.pylintrc"
+    ],
+    "pylint.ignorePatterns": [
+        "**/tests/*",
+    ],
+    "pylint.importStrategy": "fromEnvironment",
+    // Pytest
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportUnknownMemberType": "none"
+    }
+}
