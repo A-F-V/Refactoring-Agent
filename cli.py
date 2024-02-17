@@ -36,7 +36,7 @@ def init_repo(repo: str, folder: str):
 def run():
 
     click.echo("Running the demo")
-    click.echo(test_agent("What is the capital of France?"))
+    click.echo(test_agent("What is the square root of 110"))
 
 
 cli.add_command(init_repo)

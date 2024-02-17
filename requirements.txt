@@ -20,3 +20,14 @@ click
 
 langchain
 langchainhub
+langchain_openai
+langchain_experimental
+
+python-dotenv
+
+# Git Manipulation
+pygit2
+
+# LSP
+jedi
+

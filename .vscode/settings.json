@@ -3,12 +3,12 @@
     "python.analysis.typeCheckingMode": "basic",
     "[python]": {
         // Style Formatting
-        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.defaultFormatter": "ms-python.python",
         "editor.formatOnSave": true,
     },
     // Pylint Settings
     // Linting
-    "pylint.enabled": false,
+    "pylint.enabled": true,
     "pylint.args": [
         "--rcfile=${workspaceFolder}/.pylintrc"
     ],
