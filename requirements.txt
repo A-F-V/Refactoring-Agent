@@ -14,3 +14,9 @@ sphinx
 # For Type Checking
 mypy
 
+#########################
+
+click
+
+langchain
+langchainhub

@@ -2,6 +2,7 @@ import click
 import os
 import dotenv
 import pygit2 as git
+from src.agent import test_agent
 
 dotenv.load_dotenv()
 
@@ -23,7 +24,7 @@ def init_repo(repo: str, folder: str):
         # Reset the repo
         click.echo(f"Resetting {folder}...")
         git_repo = git.Repository(folder)
-        git_repo.reset(git_repo.head.target, git.enums.ResetMode.HARD)
+        git_repo.reset(git_repo.head.target, git.enums.ResetMode.HARD)  # type: ignore
         click.echo(f"Reset {folder}")
     else:
         click.echo(f"Downloading {repo}...")
@@ -31,7 +32,15 @@ def init_repo(repo: str, folder: str):
         click.echo(f"Downloaded {repo}")
 
 
+@click.command()
+def run():
+
+    click.echo("Running the demo")
+    click.echo(test_agent("What is the capital of France?"))
+
+
 cli.add_command(init_repo)
+cli.add_command(run)
 
 if __name__ == "__main__":
     cli()

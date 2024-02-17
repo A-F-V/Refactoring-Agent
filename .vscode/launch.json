@@ -7,10 +7,10 @@
             "request": "launch",
             "program": "${workspaceFolder}/cli.py",
             "args": [
-                "init-repo"
+                "run"
             ],
             "console": "integratedTerminal",
-            "preLaunchTask": "TypeCheck"
+            // Disabled for now  "preLaunchTask": "TypeCheck"
         }
     ]
 }
