@@ -33,10 +33,14 @@ def init_repo(repo: str, folder: str):
 
 
 @click.command()
-def run():
+@click.option("--repo", default="./demo", help="The repo to download")
+def run(repo: str):
 
     click.echo("Running the demo")
-    click.echo(test_agent("What is the square root of 110"))
+    
+    code_path = "edit_distance/edit_distance.py"
+    query = f"Get the docstring of a function starting with `lowest` in {code_path}. Return only that"
+    click.echo(test_agent(query,repo))
 
 
 cli.add_command(init_repo)
