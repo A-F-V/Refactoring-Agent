@@ -22,6 +22,7 @@ langchain
 langchainhub
 langchain_openai
 langchain_experimental
+langgraph
 
 python-dotenv
 

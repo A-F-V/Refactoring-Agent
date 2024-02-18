@@ -2,7 +2,8 @@ import click
 import os
 import dotenv
 import pygit2 as git
-from src.agent import test_agent
+from src.agent import RefactoringAgent, test_agent
+from src.common.definitions import ProjectContext
 
 dotenv.load_dotenv()
 
@@ -40,7 +41,10 @@ def run(repo: str):
     
     code_path = "edit_distance/edit_distance.py"
     query = f"Get the docstring of a function starting with `lowest` in {code_path}. Return only that"
-    click.echo(test_agent(query,repo))
+    
+    context = ProjectContext(folder_path=repo)
+    agent = RefactoringAgent(context)
+    click.echo(agent.run(query)
 
 
 cli.add_command(init_repo)

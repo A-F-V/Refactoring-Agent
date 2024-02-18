@@ -1,24 +1,39 @@
 from langchain import hub
 from langchain.agents import AgentExecutor, create_openai_functions_agent
 from langchain_openai import ChatOpenAI
-from .actions import PythonReplTool, CodeSearchToolkit, ProjectContext
+from langgraph.graph import StateGraph
+from src.planning.memory import History
+from .actions import PythonReplTool, CodeSearchToolkit
+from .common.definitions import ProjectContext
+from .actions.action import ActionDispatcher
+from .actions.basic_actions import create_logging_action
+from typing import TypedDict
 
 
-def test_agent(query: str,repo_path: str):
-    context:ProjectContext = {
-        "folder_path": repo_path
-    }
-    tools = [PythonReplTool, *CodeSearchToolkit(context).get_tools()]
-    # Get the prompt to use - you can modify this!
-    prompt = hub.pull("hwchase17/openai-functions-agent")
-    # Choose the LLM that will drive the agent
-    llm = ChatOpenAI(model="gpt-4-turbo-preview")
-    # Construct the OpenAI Functions agent
-    agent_runnable = create_openai_functions_agent(llm, tools, prompt)
+class RefactoringAgentState(TypedDict):
+    history: History
 
-    # Create the agent executor
-    agent_executor = AgentExecutor(agent=agent_runnable, tools=tools,verbose=True)
 
-    # Run the agent
-    response: str = agent_executor.invoke({"input": query})
-    return response
+class RefactoringAgent:
+    def __init__(self, context: ProjectContext):
+        self.context = context
+        # Load Actions
+        self.dispatcher = ActionDispatcher()
+        self.dispatcher.register_action(create_logging_action())
+        
+        self._setup_agent_graph()
+
+    @staticmethod
+    def _should_continue(state: RefactoringAgentState):
+        return False
+    
+    def _setup_agent_graph(self):
+        self.graph = StateGraph(RefactoringAgentState)
+        
+        self.llm = ChatOpenAI(model="gpt-4-turbo-preview")
+        
+        #self.graph.add_node('')
+        self.app = self.graph.compile()
+        
+    def run(self,input:str)
+        return self.app.invoke(input)

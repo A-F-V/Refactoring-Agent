@@ -1,75 +1,60 @@
-from typing import Type, Optional
-
-from .project_context import ProjectContext
+from typing import Optional, List
+from ..common import ProjectContext, Symbol, parse_completion_to_symbol
 
 from langchain.pydantic_v1 import BaseModel, Field
-from langchain.tools import BaseTool, StructuredTool, tool
-from langchain.callbacks.manager import (
-    AsyncCallbackManagerForToolRun,
-    CallbackManagerForToolRun,
-)
+from langchain.tools import tool
+
 import jedi
 import os
 
-######################################
-# JEDI Utils
-def get_definition_for_name(file_path, start_line,end_line):
-    # Load the file
-    with open(file_path, "r") as file:
-        code = file.readlines()
-        #    Get the code
-        return "\n".join(code[start_line:end_line])
 
-    
 ###########################################
 # Tools
+
+
 class SearchInput(BaseModel):
-    query: str = Field(description="should be a search query for jedi")
-    file_path: str = Field(description="should be a file path")
-
-
-def create_script_search_tool(project_context: ProjectContext):
-    def search(query:str, file_path:str):
-        # folder path / file path
-        path = os.path.join(project_context["folder_path"], file_path)
-        script = jedi.Script(path=path)
-        completions =  list(script.complete_search(query))
-        print(completions)
-        result = []
-        for completion in completions:
-            signatures = completion.get_signatures()
-            start = completion.get_definition_start_position()
-            end = completion.get_definition_end_position()
-            body = get_definition_for_name(path,start[0],end[0])
-            info = {
-                "name": completion.name,
-                "type": completion.type,
-                "signatures": [sig.description for sig in signatures],
-                "body": body,
-            }
-            result.append(str(info))
-            
-            
-
-        return "\n".join(result)
-
-    return StructuredTool.from_function(
-        func=search,
-        name="script-search",
-        description="Search a file for symbols using jedi. Returns the definition of the symbol.",
-        args_schema=SearchInput,
+    query: str = Field(description="a symbol to search for in repository.")
+    fuzzy: bool = Field(description="whether to use fuzzy search", default=False)
+    file_path: Optional[str] = Field(
+        description="whether to narrow the search to a specific file. If not provided, search the entire repository.",
+        default=None,
     )
 
-               
 
+def create_code_search(context: ProjectContext):
+    @tool("code-symbol-search", args_schema=SearchInput)
+    def code_search(
+        query: str,
+        fuzzy: bool = False,
+        file_path: Optional[str] = None,
+    ) -> List[Symbol]:
+        """
+        Performs a search for a symbol in a file or folder.
+        """
+        # searcher
+        if file_path is None:
+            # folder path
+            searcher = jedi.Project(context.folder_path)
+        else:
+            # folder path / file path
+            path = os.path.join(context.folder_path, file_path)
+            searcher = jedi.Script(path=path)
 
+        completions = list(searcher.complete_search(query, fuzzy=fuzzy))
+
+        print(completions)
+        return [parse_completion_to_symbol(completion) for completion in completions]
+
+    return code_search
 
 
 # Create a search toolkita
 
+
 class CodeSearchToolkit:
-    def __init__(self,context:ProjectContext) -> None:
+
+    def __init__(self, context: ProjectContext):
         self.context = context
-        
+
     def get_tools(self):
-        return [create_script_search_tool(self.context)]
+        return [create_code_search(self.context)]
