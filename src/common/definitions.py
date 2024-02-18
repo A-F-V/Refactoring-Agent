@@ -1,3 +1,4 @@
+from enum import Enum
 from pydantic import BaseModel, Field
 from typing import TypedDict
 
@@ -27,14 +28,24 @@ def parse_completion_to_symbol(completion) -> Symbol:
 # State Defs
 
 
-class SequentialActionState(TypedDict):
-    next_action_id: str
-    next_action_args: str
-    last_action_result: str
-    next_llm_request: str
-
-
 class ProjectContext(BaseModel):
     """A project context."""
 
     folder_path: str = Field(description="The folder path of the project")
+
+
+class ActionSuccess(Enum):
+    SUCCESS = "SUCCESS"
+    ACTION_NOT_FOUND = "ACTION_NOT_FOUND"
+    ACTION_FAILED = "ACTION_FAILED"
+
+
+class ActionRequest(TypedDict):
+    id: str
+    action_str: str
+
+
+class ActionRecord(TypedDict):
+    request: ActionRequest
+    success: ActionSuccess
+    observation: str

@@ -40,7 +40,7 @@ def run(repo: str):
     click.echo("Running the demo")
 
     code_path = "edit_distance/edit_distance.py"
-    query = f"Log a random number"
+    query = f"Create a plan to log numbers from 1 to 3"
 
     context = ProjectContext(folder_path=repo)
     agent = RefactoringAgent()

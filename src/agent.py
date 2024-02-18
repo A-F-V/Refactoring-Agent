@@ -2,26 +2,12 @@ from langchain import hub
 from langchain.agents import AgentExecutor, create_openai_functions_agent
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
-from src.planning.memory import History
+from src.planning.planner import DecisionMaker, Planner
+from src.planning.state import RefactoringAgentState
 from .actions import PythonReplTool, CodeSearchToolkit
-from .common.definitions import ProjectContext, SequentialActionState
-from .execution import ActionDispatcher, LLMController
+from .common.definitions import ProjectContext
+from .execution import ActionDispatcher, ExecuteTopOfPlan, LLMController
 from .actions.basic_actions import create_logging_action
-from typing import TypedDict
-from langchain.prompts import PromptTemplate, HumanMessagePromptTemplate
-
-
-class RefactoringAgentState(SequentialActionState):
-    user_task: str
-    project_context: ProjectContext
-    history: History
-
-
-def create_simple_controller():
-    dispatcher = ActionDispatcher()
-    dispatcher.register_action(create_logging_action())
-
-    return LLMController(dispatcher)
 
 
 class RefactoringAgent:
@@ -35,23 +21,31 @@ class RefactoringAgent:
 
     def _initial_state(self, state: RefactoringAgentState):
         print("State Initialized")
-        return {"next_llm_request": state["user_task"]}
+
+    def _create_refactoring_actions(self):
+        action_list = ActionDispatcher()
+        action_list.register_action(create_logging_action())
+        return action_list.get_action_list()
 
     def _setup_agent_graph(self):
+
+        action_list = self._create_refactoring_actions()
+
         self.graph = StateGraph(RefactoringAgentState)
 
-        self.graph.add_node("entry", self._initial_state)
-        self.graph.add_node("llm-controller", create_simple_controller())
-        self.graph.add_edge("entry", "llm-controller")
-        self.graph.add_edge("llm-controller", END)
-        self.graph.set_entry_point("entry")
+        self.graph.add_node("planner", Planner(action_list))
+        self.graph.add_node("execute", ExecuteTopOfPlan(action_list))
+        self.graph.add_conditional_edges("planner", DecisionMaker())
+        self.graph.add_conditional_edges("execute", DecisionMaker())
+        self.graph.set_entry_point("planner")
         # self.graph.add_node('')
         self.app = self.graph.compile()
 
     def run(self, input: str, context: ProjectContext):
-        request = {
-            "user_task": input,
+        state: RefactoringAgentState = {
+            "goal": input,
             "project_context": context,
-            "history": History(actions_observations=[]),
+            "history": [],
+            "plan": [],
         }
-        return self.app.invoke(request)
+        return self.app.invoke(state)

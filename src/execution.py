@@ -1,8 +1,7 @@
-from enum import Enum
 import json
 import sys
 from tabnanny import verbose
-from typing import Dict, TypedDict
+from typing import Dict, List
 from langchain_openai import ChatOpenAI
 from langchain_core.utils.function_calling import convert_to_openai_function
 from src.actions.action import Action
@@ -15,22 +14,11 @@ from langchain.prompts import (
 )
 from langchain.output_parsers.openai_tools import JsonOutputToolsParser
 from langchain_core.output_parsers import JsonOutputParser
-from src.common.definitions import SequentialActionState
 from langchain import hub
 from langchain.agents import AgentExecutor, create_openai_tools_agent
+from src.common.definitions import ActionSuccess, ActionRequest, ActionRecord
 
-
-class ActionSuccess(Enum):
-    SUCCESS = "SUCCESS"
-    ACTION_NOT_FOUND = "ACTION_NOT_FOUND"
-    ACTION_FAILED = "ACTION_FAILED"
-
-
-class ActionRecord(TypedDict):
-    id: str
-    success: ActionSuccess
-    action_str: str
-    observation: str
+from src.planning.state import RefactoringAgentState
 
 
 class ActionDispatcher:
@@ -59,7 +47,9 @@ class ActionDispatcher:
         """
         return list(self.actions.values())
 
-    def dispatch(self, state: SequentialActionState) -> ActionRecord:
+    def dispatch(
+        self, state: RefactoringAgentState, request: ActionRequest
+    ) -> ActionRecord:
         """
         Dispatches an action based on its ID.
 
@@ -71,64 +61,118 @@ class ActionDispatcher:
         Returns:
             ActionRecord: The result of the action execution.
         """
-        id = state["next_action_id"]
-        action_str = state["next_action_args"]
+        id = request["id"]
+        action_str = request["action_str"]
         action = self.actions.get(id)
         if action:
             try:
-                observation = action.execute(state)
+                observation = action.execute(state, action_str)
                 return ActionRecord(
-                    id=id,
+                    request=request,
                     success=ActionSuccess.SUCCESS,
-                    action_str=action_str,
                     observation=observation,
                 )
             except Exception as e:
                 return ActionRecord(
-                    id=id,
+                    request=request,
                     success=ActionSuccess.ACTION_FAILED,
-                    action_str=action_str,
                     observation=str(e),
                 )
         else:
             return ActionRecord(
-                id=id,
+                request=request,
                 success=ActionSuccess.ACTION_NOT_FOUND,
-                action_str=action_str,
                 observation="",
             )
+
+
+class ExecuteTopOfPlan:
+    def __init__(self, action_list: List[Action]):
+        self.dispatcher = ActionDispatcher()
+        for action in action_list:
+            self.dispatcher.register_action(action)
+
+    def __call__(self, state: RefactoringAgentState):
+        # Check if there is an action at the top of the plan
+        plan = state["plan"]
+        if len(plan) == 0:
+            raise Exception("No actions in the plan")
+        action = plan[0]
+        # Dispatch the action
+        record = self.dispatcher.dispatch(state, action)
+        # Save the result
+        state["history"].append(record)
+        # Remove the action from the plan
+        state["plan"] = plan[1:]
+        return state
 
 
 # Given a prompt, the LLMControler will dispatch a suitable action
 
 
 class LLMController:
-    def __init__(self, dispatcher: ActionDispatcher):
-        self.dispatcher = dispatcher
-        self.create_prompt()
+    def __init__(self, actions: List[Action], current_task: str, verbose=True):
+        self.actions = actions
         self.llm = ChatOpenAI(model="gpt-4-turbo-preview")
         self.parser = JsonOutputToolsParser()
+        self.current_task = current_task
+        self.create_prompt()
+        self.verbose = verbose
         # self.chain = self.prompt_template | self.llm | self.parser
 
     def create_prompt(self):
+        # For execution
         prompt = hub.pull("hwchase17/openai-tools-agent")
-        self.prompt_template = prompt
+        self.agent_prompt = prompt
+        # For Context
+        # TODO: Evaluate this part
+        self.context_prompt = PromptTemplate.from_template(
+            f"""
+            Current Task: '{self.current_task}'
+            ---
+            Ultimate Goal: '{{goal}}'
+            ---
+            History: {{history}}
+            ---
+            Plan: {{plan}}
+            ---
+            
+            Now invoke suitable functions to complete the Current Task
+            """
+        )
+
+    def format_context_prompt(self, state: RefactoringAgentState) -> str:
+        history = list(map(json.dumps, state["history"]))
+        plan = list(map(json.dumps, state["plan"]))
+        message_sent = self.context_prompt.format(
+            goal=state["goal"],
+            history=str(history),
+            plan=str(plan),
+        )
+        if self.verbose:
+            print(message_sent)
+        return message_sent
 
     def get_openai_tools(self, state):
-        tools = map(lambda x: x.to_tool(state), self.dispatcher.get_action_list())
+        tools = map(lambda x: x.to_tool(state), self.actions)
         # open_ai_tools = map(convert_to_openai_function, tools)
         return list(tools)
 
-    def run(self, state: SequentialActionState):
+    def run(self, state: RefactoringAgentState):
         tools = self.get_openai_tools(state)
 
         # Construct the OpenAI Tools agent
-        agent = create_openai_tools_agent(self.llm, tools, self.prompt_template)
-        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+        agent = create_openai_tools_agent(self.llm, tools, self.agent_prompt)
+        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=self.verbose)
         # Decide what to do
+        if self.verbose:
+            print("Action List:")
+            print("\n".join([str(action) for action in self.actions]))
+            print("----")
+        result = agent_executor.invoke({"input": self.format_context_prompt(state)})
+        output = result["output"]
+        return state, output
 
-        output = agent_executor.invoke({"input": state["next_llm_request"]})
-        # print(output)
-
-    def __call__(self, state):
-        self.run(state)
+    def __call__(self, state: RefactoringAgentState):
+        state, output = self.run(state)
+        return state

@@ -9,7 +9,7 @@
             "args": [
                 "run"
             ],
-            "justMyCode": false,
+            "justMyCode": true,
             "console": "integratedTerminal",
             // Disabled for now  "preLaunchTask": "TypeCheck"
         }
