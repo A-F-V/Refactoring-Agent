@@ -1,6 +1,6 @@
 from typing import List, Tuple, TypedDict
 
-from src.actions.action import ActionRecord
+from ..execution import ActionRecord
 
 
 class History(TypedDict):

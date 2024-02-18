@@ -2,6 +2,8 @@ from pydantic import BaseModel, Field
 from typing import TypedDict
 
 
+###########################################
+# Action Defs
 class Symbol(BaseModel):
     name: str = Field(description="The name of the symbol")
     file_location: str = Field(description="The file location of the symbol")
@@ -19,6 +21,17 @@ def parse_completion_to_symbol(completion) -> Symbol:
         column=int(column),
     )
     return result
+
+
+##########################################
+# State Defs
+
+
+class SequentialActionState(TypedDict):
+    next_action_id: str
+    next_action_args: str
+    last_action_result: str
+    next_llm_request: str
 
 
 class ProjectContext(BaseModel):

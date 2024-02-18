@@ -1,98 +1,48 @@
 from abc import ABC, abstractmethod
+from ast import Str
 from enum import Enum
+import json
 from sre_constants import SUCCESS
 from typing import TypeVar, Generic, Callable, Type, TypedDict
+from unittest.mock import Base
+from src.common.definitions import SequentialActionState
 from ..common import ProjectContext
-from pydantic import BaseModel
+from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_core.output_parsers import JsonOutputParser
+from langchain.tools import tool, StructuredTool
 
 # Action is an abstract base class
 
-
-class Action(ABC):
-    def __init__(self, id, description):
-        self.id = id
-        self.description = description
-
-    @abstractmethod
-    def execute(self, action_str: str, **kwargs) -> str:
-        pass
-
-    @abstractmethod
-    def get_prompt_schema(self) -> str:
-        pass
+ActionArgs = TypeVar("ActionArgs", bound=BaseModel)
+State = TypeVar("State", bound=SequentialActionState)
 
 
-class ActionSuccess(Enum):
-    SUCCESS = "SUCCESS"
-    ACTION_NOT_FOUND = "ACTION_NOT_FOUND"
-    ACTION_FAILED = "ACTION_FAILED"
-
-
-class ActionRecord(TypedDict):
-    id: str
-    success: ActionSuccess
-    action_str: str
-    observation: str
-
-
-AA = TypeVar("AA", bound=BaseModel)
-# Ensure AA is a pedantic type
-
-
-class ProjectContextualisedAction(Action, Generic[AA]):
+class Action(Generic[ActionArgs, State]):
     def __init__(
         self,
         id,
         description,
-        model_cls: Type[AA],
-        f: Callable[[ProjectContext, AA], str],
+        model_cls: Type[ActionArgs],
+        f: Callable[[State, ActionArgs], str],
     ):
-        super().__init__(id, description)
+        self.id = id
+        self.description = description
         self.parser = JsonOutputParser(pydantic_object=model_cls)
         self.f = f
         self.cls = model_cls
 
-    def execute(self, action_str: str, **kwargs) -> str:
-        context = kwargs.get("context")
-        if not context or not isinstance(context, ProjectContext):
-            raise ValueError("No context provided")
-        args = self.parser.invoke(action_str)
-        return self.f(context, args)
+    def execute(self, state: State):
+        action_args = self.parser.invoke(state["next_action_args"])
+        result = self.f(state, action_args)
+        state["last_action_result"] = result
 
-    def get_prompt_schema(self) -> str:
-        return str(self.cls.model_json_schema())
+    def to_tool(self, state) -> StructuredTool:
+        def tool_f(**kwargs):
+            self.f(state, self.cls(**kwargs))
 
-
-class ActionDispatcher:
-    def __init__(self):
-        self.actions = {}
-
-    def register_action(self, action: Action):
-        self.actions[action.id] = action
-
-    def dispatch(self, id: str, action_str: str, **kwargs) -> ActionRecord:
-        action = self.actions.get(id)
-        if action:
-            try:
-                observation = action.execute(action_str, **kwargs)
-                return ActionRecord(
-                    id=id,
-                    success=ActionSuccess.SUCCESS,
-                    action_str=action_str,
-                    observation=observation,
-                )
-            except Exception as e:
-                return ActionRecord(
-                    id=id,
-                    success=ActionSuccess.ACTION_FAILED,
-                    action_str=action_str,
-                    observation=str(e),
-                )
-        else:
-            return ActionRecord(
-                id=id,
-                success=ActionSuccess.ACTION_NOT_FOUND,
-                action_str=action_str,
-                observation="",
-            )
+        return StructuredTool(
+            name=self.id,
+            description=self.description,
+            args_schema=self.cls,
+            func=tool_f,
+        )

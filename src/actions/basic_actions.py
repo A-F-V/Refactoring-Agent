@@ -1,5 +1,6 @@
-from action import ActionDispatcher, ProjectContextualisedAction
-from pydantic import BaseModel, Field
+from ..execution import ActionDispatcher
+from .action import Action
+from langchain_core.pydantic_v1 import BaseModel, Field
 
 #########################
 # Logging Action
@@ -10,11 +11,11 @@ class LoggingInput(BaseModel):
 
 
 def create_logging_action():
-    def log(context, args):
+    def log(state, args: LoggingInput):
         print(args.message)
         return "Logged message"
 
-    action = ProjectContextualisedAction(
+    action = Action(
         id="log", description="Log a message", model_cls=LoggingInput, f=log
     )
     return action

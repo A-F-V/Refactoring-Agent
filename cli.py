@@ -2,7 +2,7 @@ import click
 import os
 import dotenv
 import pygit2 as git
-from src.agent import RefactoringAgent, test_agent
+from src.agent import RefactoringAgent
 from src.common.definitions import ProjectContext
 
 dotenv.load_dotenv()
@@ -38,13 +38,13 @@ def init_repo(repo: str, folder: str):
 def run(repo: str):
 
     click.echo("Running the demo")
-    
+
     code_path = "edit_distance/edit_distance.py"
-    query = f"Get the docstring of a function starting with `lowest` in {code_path}. Return only that"
-    
+    query = f"Log a random number"
+
     context = ProjectContext(folder_path=repo)
-    agent = RefactoringAgent(context)
-    click.echo(agent.run(query)
+    agent = RefactoringAgent()
+    click.echo(agent.run(query, context))
 
 
 cli.add_command(init_repo)
