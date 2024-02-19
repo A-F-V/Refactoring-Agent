@@ -1,4 +1,6 @@
 import click
+
+from src.planning.state import RefactoringAgentState
 from ..execution import ActionDispatcher
 from .action import Action
 from langchain_core.pydantic_v1 import BaseModel, Field
@@ -12,13 +14,15 @@ class LoggingInput(BaseModel):
 
 
 def create_logging_action():
-    def log(state, args: LoggingInput):
-        print(f"LOG: {args.message}", flush=True)
-        return "Logged message"
+    def log(state: RefactoringAgentState, args: LoggingInput):
+        msg = args.message
+        print(f"LOG: {msg}", flush=True)
+        state["console"].append(msg)
+        return f"Logged '{msg}'"
 
     action = Action(
         id="print-message",
-        description="Print a message to the console. There is no other way to communicate to the user than through printing with this action.",
+        description="Print a message to the dedicated `Console`",
         model_cls=LoggingInput,
         f=log,
     )

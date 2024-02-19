@@ -3,6 +3,7 @@ from src.actions.action import Action
 from src.common.definitions import Definition, pydantic_to_str
 
 from src.planning.state import RefactoringAgentState
+from src.utilities.paths import add_path_to_prefix
 from ..common import ProjectContext, Symbol
 
 from langchain.pydantic_v1 import BaseModel, Field
@@ -20,7 +21,7 @@ import os
 # JEDI Utils
 def get_definition_for_name(defining_name, context: ProjectContext):
     # Load the file
-    path = os.path.join(context.folder_path, defining_name.module_path)
+    path = defining_name.module_path
 
     (start, _) = defining_name.get_definition_start_position()
     (end, _) = defining_name.get_definition_end_position()
@@ -45,10 +46,7 @@ def create_definition_getter():
         folder_path = state["project_context"].folder_path
         symbol = Symbol(**args.symbol)
 
-        # TODO really bad way to do this
-        script = jedi.Script(
-            path=os.path.join(folder_path, f".{symbol.file_location}"),
-        )
+        script = jedi.Script(path=add_path_to_prefix(folder_path, symbol.file_location))
         # TODO: Add more error handling
         cursor = script.goto(symbol.line, symbol.column)
         definition = cursor[0].goto()[0]

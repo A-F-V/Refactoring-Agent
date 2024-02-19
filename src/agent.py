@@ -55,5 +55,6 @@ class RefactoringAgent:
             "history": [],
             "plan": [],
             "feedback": [],
+            "console": [],
         }
         return RefactoringAgentState(**self.app.invoke(state))

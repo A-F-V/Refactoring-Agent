@@ -20,6 +20,7 @@ class RefactoringAgentState(TypedDict):
     plan: List[ActionRequest]
     # TODO: Feedback of failed actions
     feedback: List[FeedbackMessage]
+    console: List[str]
 
 
 def state_to_str(state: RefactoringAgentState) -> str:
@@ -30,6 +31,7 @@ def state_to_str(state: RefactoringAgentState) -> str:
     plan_str = format_list(plan, "P", "Plan")
     history_str = format_list(history, "H", "History")
     feedback_str = format_list(feedback, "F", "Feedback")
+    console_str = format_list(state["console"], "C", "Console")
     return f"""
     Goal:
     {state['goal']}
@@ -38,4 +40,7 @@ def state_to_str(state: RefactoringAgentState) -> str:
     Plan
     {plan_str}
     Feedback
-    {feedback_str})"""
+    {feedback_str}
+    Console
+    {console_str}
+    """

@@ -148,6 +148,9 @@ class LLMController:
             Feedback:
             {{feedback}}
             ---
+            Console:
+            {{console}}
+            ---
             Now invoke suitable functions to complete the Current Task
             """
         )
@@ -160,11 +163,13 @@ class LLMController:
         plan_str = format_list(plan, "P", "Plan")
         history_str = format_list(history, "H", "History")
         feedback_str = format_list(feedback, "F", "Feedback")
+        console_str = format_list(state["console"], "C", "Console")
         message_sent = self.context_prompt.format(
             goal=state["goal"],
             history=history_str,
             plan=plan_str,
             feedback=feedback_str,
+            console=console_str,
         )
         if self.verbose:
             print(message_sent)
@@ -183,9 +188,10 @@ class LLMController:
         agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=self.verbose)
         # Decide what to do
         if self.verbose:
-            print("Action List:")
-            print("\n".join([str(action) for action in self.actions]))
-            print("----")
+            # print("Action List:")
+            # print("\n".join([str(action) for action in self.actions]))
+            # print("----")
+            pass
         output = ""
         try:
             try:

@@ -3,7 +3,7 @@ from typing import List
 from src.actions.action import Action
 from src.execution import ActionDispatcher, LLMController
 from src.planning.plan_actions import (
-    create_add_to_plan_action,
+    create_action_adder_for_plan,
     create_clear_plan_action,
 )
 from src.planning.state import RefactoringAgentState
@@ -15,7 +15,8 @@ class Planner:
     def __init__(self, action_list: List[Action]):
         self.plan_dispatcher = ActionDispatcher()
         self.plan_dispatcher.register_action(create_clear_plan_action())
-        self.plan_dispatcher.register_action(create_add_to_plan_action(action_list))
+        for action in action_list:
+            self.plan_dispatcher.register_action(create_action_adder_for_plan(action))
         # TODO: Stop planning
         task = """Select the next actions to add to the plan or clear the plan.
         Note the following:
@@ -49,11 +50,12 @@ class DecisionMaker:
         - 'plan': Adjust the plan/schedule of actions to take by either adding or clearing the current plan. You will not be able to execute actions from the plan if you select this.
         - 'finish': Finish the process. Do not call if there are still actions to take or if the goal has not been perfectly met.
         
-        Transition by only 1 step at a time.
-        Make sure the history of executed actions completes the goal in its entirety. 
-        You may need to adjust your plan as you go, especially if a result from a past action should be incorporated into a future action.
-        Examples:
-        - if you need to get some data then log, you should 'plan' after the query action has been completed
+        Additional Notes:
+        - Transition by only 1 step at a time.
+        - Make sure the history of executed actions completes the goal in its entirety. 
+        - If you are asked a query, you must answer it by writting to the console (only achieved by calling `print-message`).
+        - You may need to adjust your plan as you go, especially if a result from a past action should be incorporated into a future action.
+        
         """
         self.controller = LLMController([next_step_action], task)
 
