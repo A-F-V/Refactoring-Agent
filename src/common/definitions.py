@@ -56,7 +56,7 @@ class ActionRecord(TypedDict):
 
 # Don't need Success?
 def record_to_str(record: ActionRecord) -> str:
-    return f"{{\"request\":{request_to_str(record['request'])},\"result\":{record['result']}}}"
+    return f"{{\"request\":{request_to_str(record['request'])},\"result\":'{record['result']}'}}"
 
 
 class FailureReason(Enum):

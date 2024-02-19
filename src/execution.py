@@ -139,7 +139,7 @@ class LLMController:
             ---
             Ultimate Goal: '{{goal}}'
             ---
-            History: 
+            Execution History and Observations: 
             {{history}}
             ---
             Current Plan: 
@@ -186,9 +186,19 @@ class LLMController:
             print("Action List:")
             print("\n".join([str(action) for action in self.actions]))
             print("----")
-        result = agent_executor.invoke({"input": self.format_context_prompt(state)})
-        output = result["output"]
-        return state, output
+        output = ""
+        try:
+            try:
+                result = agent_executor.invoke(
+                    {"input": self.format_context_prompt(state)}
+                )
+                output = result["output"]
+            except Exception as e:
+                raise FeedbackMessage(FailureReason.ACTION_FAILED, str(e))
+        except FeedbackMessage as f:
+            state["feedback"].append(f)
+        finally:
+            return state, output
 
     def __call__(self, state: RefactoringAgentState):
         state, output = self.run(state)

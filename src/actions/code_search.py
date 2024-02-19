@@ -46,7 +46,8 @@ def create_code_search():
 
         print(completions)
         output = [parse_completion_to_symbol(completion) for completion in completions]
-        output = "\n".join([json.dumps(x) for x in output])
+        # Todo: make the path relative to the project
+        output = "\n".join(map(str, output))
         print(output)
         return output
 

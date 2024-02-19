@@ -41,7 +41,7 @@ def run(repo: str):
     click.echo("Running the demo")
 
     code_path = "edit_distance/edit_distance.py"
-    query = f"Log the line number of a function starting with 'lowest' in {code_path}"
+    query = f"Find then Log the line number of a function starting with 'lowest' in {code_path}. You must log the line number of the function."
 
     context = ProjectContext(folder_path=repo)
     agent = RefactoringAgent()

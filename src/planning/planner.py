@@ -17,7 +17,10 @@ class Planner:
         self.plan_dispatcher.register_action(create_clear_plan_action())
         self.plan_dispatcher.register_action(create_add_to_plan_action(action_list))
         # TODO: Stop planning
-        task = "Plan the next actions to take to achieve the ultimate goal"
+        task = """Select the next actions to add to the plan or clear the plan.
+        Note the following:
+        - The history is not visible to the user.
+        """
         self.controller = LLMController(self.plan_dispatcher.get_action_list(), task)
 
     def __call__(self, state: RefactoringAgentState):
@@ -44,9 +47,13 @@ class DecisionMaker:
         Select ONLY one of the following to do next: 'execute', 'plan' or 'finish'.
         - 'execute': Run the next action on the top of the plan
         - 'plan': Adjust the plan/schedule of actions to take by either adding or clearing the current plan. You will not be able to execute actions from the plan if you select this.
-        - 'finish': Finish the process. Do not call if there are still actions to take.
+        - 'finish': Finish the process. Do not call if there are still actions to take or if the goal has not been perfectly met.
         
         Transition by only 1 step at a time.
+        Make sure the history of executed actions completes the goal in its entirety. 
+        You may need to adjust your plan as you go, especially if a result from a past action should be incorporated into a future action.
+        Examples:
+        - if you need to get some data then log, you should 'plan' after the query action has been completed
         """
         self.controller = LLMController([next_step_action], task)
 
@@ -58,7 +65,7 @@ class DecisionMaker:
                 if state["plan"]:
                     self.next_node = "execute"
                 else:
-                    self.next_node = END  # TODO: error state
+                    self.next_node = "planner"  # TODO: error state
             else:
                 self.next_node = END
             return f"Transitioning to {self.next_node}"

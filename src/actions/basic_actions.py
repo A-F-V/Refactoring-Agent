@@ -17,6 +17,9 @@ def create_logging_action():
         return "Logged message"
 
     action = Action(
-        id="log", description="Log a message", model_cls=LoggingInput, f=log
+        id="log-message",
+        description="Log a message to the console. ",
+        model_cls=LoggingInput,
+        f=log,
     )
     return action
