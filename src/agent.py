@@ -2,6 +2,7 @@ from langchain import hub
 from langchain.agents import AgentExecutor, create_openai_functions_agent
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
+from src.actions.code_inspection import create_definition_getter
 from src.actions.code_search import create_code_search
 from src.planning.planner import DecisionMaker, Planner
 from src.planning.state import RefactoringAgentState
@@ -24,8 +25,13 @@ class RefactoringAgent:
 
     def _create_refactoring_actions(self):
         action_list = ActionDispatcher()
+        # General
         action_list.register_action(create_logging_action())
+        # Code Querying & Manipulation
         action_list.register_action(create_code_search())
+        action_list.register_action(create_definition_getter())
+        # Git
+
         return action_list.get_action_list()
 
     def _setup_agent_graph(self):

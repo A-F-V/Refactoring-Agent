@@ -8,17 +8,17 @@ from langchain_core.pydantic_v1 import BaseModel, Field
 
 
 class LoggingInput(BaseModel):
-    message: str = Field(description="The message to log")
+    message: str = Field(description="The message to print")
 
 
 def create_logging_action():
     def log(state, args: LoggingInput):
-        print(args, flush=True)
+        print(f"LOG: {args.message}", flush=True)
         return "Logged message"
 
     action = Action(
-        id="log-message",
-        description="Log a message to the console. ",
+        id="print-message",
+        description="Print a message to the console. There is no other way to communicate to the user than through printing with this action.",
         model_cls=LoggingInput,
         f=log,
     )

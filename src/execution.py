@@ -139,7 +139,7 @@ class LLMController:
             ---
             Ultimate Goal: '{{goal}}'
             ---
-            Execution History and Observations: 
+            Execution History and Observations (Oldest to Newest): 
             {{history}}
             ---
             Current Plan: 

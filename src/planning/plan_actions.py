@@ -52,8 +52,9 @@ def create_add_to_plan_action(action_list: List[Action]):
     description = f"""
         Add an action to the plan from the following:
         {action_list_str}
+        
+        Do not include the description of the action
         """
-    print(description)
     action = Action(
         id="add_to_plan",
         description=description,

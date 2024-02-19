@@ -2,11 +2,19 @@ from enum import Enum
 from pydantic import BaseModel, Field
 from typing import Generic, Type, TypedDict, TypeVar
 
+from src.utilities.paths import remove_path_prefix
 
-def pydantic_to_str(request: BaseModel):
+
+def pydantic_to_str(request: BaseModel, with_name: bool = True) -> str:
     # get name of type
-    name = request.__class__.__name__
+    name = request.__class__.__name__ if with_name else ""
     return f"{name}{request.model_dump()}"
+
+
+class ProjectContext(BaseModel):
+    """A project context."""
+
+    folder_path: str = Field(description="The folder path of the project")
 
 
 ###########################################
@@ -18,30 +26,13 @@ class Symbol(BaseModel):
     column: int = Field(description="The column number of the symbol")
 
 
-def parse_completion_to_symbol(completion) -> Symbol:
-    (line, column) = completion.get_definition_start_position()
-    # end = completion.get_definition_end_position()
-    result = Symbol(
-        name=str(completion.name),
-        file_location=str(completion.module_path),
-        line=int(line),
-        column=int(column),
-    )
-    return result
-
-
-def symbol_to_str(symbol: Symbol) -> str:
-    return f"Symbol{{\"name\":{symbol.name},\"file_location\":{symbol.file_location},\"line\":{symbol.line},\"column\":{symbol['column']}}}"
+class Definition(BaseModel):
+    symbol: Symbol = Field(description="The symbol of the definition")
+    code: str = Field(description="The body of the definition")
 
 
 ##########################################
 # State Defs
-
-
-class ProjectContext(BaseModel):
-    """A project context."""
-
-    folder_path: str = Field(description="The folder path of the project")
 
 
 class ActionSuccess(Enum):
