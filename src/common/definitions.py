@@ -1,6 +1,12 @@
 from enum import Enum
 from pydantic import BaseModel, Field
-from typing import TypedDict
+from typing import Generic, Type, TypedDict, TypeVar
+
+
+def pydantic_to_str(request: BaseModel):
+    # get name of type
+    name = request.__class__.__name__
+    return f"{name}{request.model_dump()}"
 
 
 ###########################################
@@ -22,6 +28,10 @@ def parse_completion_to_symbol(completion) -> Symbol:
         column=int(column),
     )
     return result
+
+
+def symbol_to_str(symbol: Symbol) -> str:
+    return f"Symbol{{\"name\":{symbol.name},\"file_location\":{symbol.file_location},\"line\":{symbol.line},\"column\":{symbol['column']}}}"
 
 
 ##########################################

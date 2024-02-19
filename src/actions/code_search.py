@@ -2,6 +2,7 @@ import json
 import stat
 from typing import Optional, List
 from src.actions.action import Action
+from src.common.definitions import pydantic_to_str
 
 from src.planning.state import RefactoringAgentState
 from ..common import ProjectContext, Symbol, parse_completion_to_symbol
@@ -47,7 +48,7 @@ def create_code_search():
         print(completions)
         output = [parse_completion_to_symbol(completion) for completion in completions]
         # Todo: make the path relative to the project
-        output = "\n".join(map(str, output))
+        output = "\n".join(map(pydantic_to_str, output))
         print(output)
         return output
 
