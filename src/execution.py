@@ -140,29 +140,31 @@ class LLMController:
         self.agent_prompt = prompt
         # For Context
         # TODO: Evaluate this part
-        message = f"""
-            <Current Task>
-            '{self.current_task}'
-            ---
-            <Ultimate Goal>
-            '{{goal}}'
-            ---
-            <Execution History and Observations (Oldest to Newest)>
-            {{history}}
-            ---
-            <Plan>
-            {{plan}}
-            ---
-            <Feedback>
-            {{feedback}}
-            ---
-            <Console>
-            {{console}}
-            ---
-            Now invoke suitable functions to complete the Current Task. 
-            Do not send other messages other than invoking functions.
-            Invoke no more than {self.number_of_actions} function calls to complete the task.
-            """
+        message = f"""<Current Task>
+'{self.current_task}'
+---
+<Ultimate Goal>
+'{{goal}}'
+---
+<Execution History and Observations (Oldest to Newest)>
+{{history}}
+---
+<Plan>
+{{plan}}
+---
+<Feedback>
+{{feedback}}
+---
+<Console>
+{{console}}
+---
+<Code Snippets>
+{{code_snippets}}
+---
+Now invoke suitable functions to complete the Current Task. 
+Do not send other messages other than invoking functions.
+Invoke no more than {self.number_of_actions} function calls to complete the task.
+"""
         self.context_prompt = PromptTemplate.from_template(message)
 
     def format_context_prompt(self, state: RefactoringAgentState) -> str:
@@ -174,12 +176,14 @@ class LLMController:
         history_str = format_list(history, "H", "History")
         feedback_str = format_list(feedback, "F", "Feedback")
         console_str = format_list(state["console"], "C", "Console")
+        code_str = format_list(state["code_snippets"], "S", "Code Snippets")
         message_sent = self.context_prompt.format(
             goal=state["goal"],
             history=history_str,
             plan=plan_str,
             feedback=feedback_str,
             console=console_str,
+            code_snippets=code_str,
         )
         if self.verbose:
             print(message_sent)

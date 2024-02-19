@@ -3,6 +3,7 @@ from ast import Tuple
 from typing import List, TypedDict
 from src.common.definitions import (
     ActionRequest,
+    CodeSnippet,
     FeedbackMessage,
     ProjectContext,
     feedback_to_str,
@@ -21,6 +22,7 @@ class RefactoringAgentState(TypedDict):
     # TODO: Feedback of failed actions
     feedback: List[FeedbackMessage]
     console: List[str]
+    code_snippets: List[CodeSnippet]
 
 
 def state_to_str(state: RefactoringAgentState) -> str:
@@ -32,15 +34,17 @@ def state_to_str(state: RefactoringAgentState) -> str:
     history_str = format_list(history, "H", "History")
     feedback_str = format_list(feedback, "F", "Feedback")
     console_str = format_list(state["console"], "C", "Console")
-    return f"""
-    Goal:
-    {state['goal']}
-    History
-    {history_str}
-    Plan
-    {plan_str}
-    Feedback
-    {feedback_str}
-    Console
-    {console_str}
-    """
+    code_str = format_list(state["code_snippets"], "S", "Code Snippets")
+    return f"""Goal:
+{state['goal']}
+History
+{history_str}
+Plan
+{plan_str}
+Feedback
+{feedback_str}
+Console
+{console_str}
+Code
+{code_str}
+"""

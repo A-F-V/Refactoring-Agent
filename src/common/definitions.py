@@ -1,8 +1,6 @@
 from enum import Enum
 from pydantic import BaseModel, Field
-from typing import Generic, Type, TypedDict, TypeVar
-
-from src.utilities.paths import remove_path_prefix
+from typing import TypedDict
 
 
 def pydantic_to_str(request: BaseModel, with_name: bool = True) -> str:
@@ -26,9 +24,15 @@ class Symbol(BaseModel):
     column: int = Field(description="The column number of the symbol")
 
 
+class CodeSpan(BaseModel):
+    file_location: str = Field(description="The file location of the span")
+    start_line: int = Field(description="The starting line number of the span")
+    end_line: int = Field(description="The ending line number of the span")
+
+
 class Definition(BaseModel):
     symbol: Symbol = Field(description="The symbol of the definition")
-    code: str = Field(description="The body of the definition")
+    span: CodeSpan = Field(description="The span of the definition")
 
 
 ##########################################
@@ -77,3 +81,13 @@ class FeedbackMessage(Exception):
 
 def feedback_to_str(feedback: FeedbackMessage) -> str:
     return f'{{"failure-reason":{feedback.reason.value},"message":{feedback.message}}}'
+
+
+class CodeSnippet(TypedDict):
+    file_path: str
+    code: str
+    starting_line: int
+
+
+def snippet_to_str(snippet: CodeSnippet) -> str:
+    return f"""<{snippet['file_path']}/line {snippet['starting_line']}>\n{snippet['code']}"""

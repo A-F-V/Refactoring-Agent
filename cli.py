@@ -41,7 +41,7 @@ def run(repo: str):
     click.echo("Running the demo")
 
     code_path = "edit_distance/edit_distance.py"
-    query = f"Print the docstring of any function starting with 'lowest' in {code_path}. I only want to python docstring."
+    query = f"Print the body of any function starting with 'lowest' in {code_path}. I only want to python docstring."
 
     context = ProjectContext(folder_path=repo)
     agent = RefactoringAgent()

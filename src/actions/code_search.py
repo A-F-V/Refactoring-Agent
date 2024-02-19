@@ -2,7 +2,6 @@ import json
 import stat
 from typing import Optional, List
 from src.actions.action import Action
-from src.actions.code_inspection import get_body_of_symbol
 from src.common import Symbol
 from src.common.definitions import Definition, pydantic_to_str
 
