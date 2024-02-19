@@ -1,11 +1,12 @@
 import json
 from nis import cat
+import re
 import sys
 from tabnanny import verbose
 from typing import Dict, List
 from langchain_openai import ChatOpenAI
 from langchain_core.utils.function_calling import convert_to_openai_function
-from src.actions.action import Action
+
 from langchain.prompts import (
     PromptTemplate,
     ChatPromptTemplate,
@@ -17,18 +18,19 @@ from langchain.output_parsers.openai_tools import JsonOutputToolsParser
 from langchain_core.output_parsers import JsonOutputParser
 from langchain import hub
 from langchain.agents import AgentExecutor, create_openai_tools_agent
+from src.actions.action import Action
 from src.common.definitions import (
     ActionSuccess,
-    ActionRequest,
-    ActionRecord,
     FailureReason,
-    FeedbackMessage,
-    feedback_to_str,
-    record_to_str,
-    request_to_str,
 )
 
-from src.planning.state import RefactoringAgentState
+from src.planning.state import (
+    ActionRecord,
+    ActionRequest,
+    FeedbackMessage,
+    RefactoringAgentState,
+    state_to_str,
+)
 from src.utilities.formatting import format_list
 
 
@@ -73,20 +75,24 @@ class ActionDispatcher:
             ActionRecord: The result of the action execution.
         """
         id = request["id"]
-        action_str = request["action_str"]
+        args = request["args"]
         action = self.actions.get(id)
         if action:
             try:
-                observation = action.execute(state, action_str)
+                observation = action.execute(state, args)
                 return ActionRecord(
                     request=request,
                     result=observation,
                 )
             except Exception as e:
-                raise FeedbackMessage(FailureReason.ACTION_FAILED, str(e))
+                raise FeedbackMessage(
+                    FailureReason.ACTION_FAILED, str(e), request=request
+                )
         else:
             raise FeedbackMessage(
-                FailureReason.ACTION_NOT_FOUND, f"Action {id} not found"
+                FailureReason.ACTION_NOT_FOUND,
+                f"Action {id} not found",
+                request=request,
             )
 
 
@@ -111,6 +117,16 @@ class ExecuteTopOfPlan:
             state["history"].append(record)
         except FeedbackMessage as f:
             state["feedback"].append(f)
+        return state
+
+
+class ExecutePlan:
+    def __init__(self, action_list: List[Action]) -> None:
+        self.executor = ExecuteTopOfPlan(action_list)
+
+    def __call__(self, state: RefactoringAgentState):
+        while len(state["plan"]) > 0:
+            state = self.executor(state)
         return state
 
 
@@ -140,51 +156,21 @@ class LLMController:
         self.agent_prompt = prompt
         # For Context
         # TODO: Evaluate this part
-        message = f"""<Current Task>
+        message = f"""
+<Current Task>
 '{self.current_task}'
 ---
-<Ultimate Goal>
-'{{goal}}'
----
-<Execution History and Observations (Oldest to Newest)>
-{{history}}
----
-<Plan>
-{{plan}}
----
-<Feedback>
-{{feedback}}
----
-<Console>
-{{console}}
----
-<Code Snippets>
-{{code_snippets}}
+{{state}}
 ---
 Now invoke suitable functions to complete the Current Task. 
+Arguments for the functions should be constructed from the context provided, including from the output of past actions.
 Do not send other messages other than invoking functions.
 Invoke no more than {self.number_of_actions} function calls to complete the task.
 """
         self.context_prompt = PromptTemplate.from_template(message)
 
     def format_context_prompt(self, state: RefactoringAgentState) -> str:
-        history = map(record_to_str, state["history"])
-        plan = map(request_to_str, state["plan"])
-        feedback = map(feedback_to_str, state["feedback"])
-
-        plan_str = format_list(plan, "P", "Plan")
-        history_str = format_list(history, "H", "History")
-        feedback_str = format_list(feedback, "F", "Feedback")
-        console_str = format_list(state["console"], "C", "Console")
-        code_str = format_list(state["code_snippets"], "S", "Code Snippets")
-        message_sent = self.context_prompt.format(
-            goal=state["goal"],
-            history=history_str,
-            plan=plan_str,
-            feedback=feedback_str,
-            console=console_str,
-            code_snippets=code_str,
-        )
+        message_sent = self.context_prompt.format(state=state_to_str(state))
         if self.verbose:
             print(message_sent)
             pass

@@ -1,7 +1,8 @@
 from enum import Enum
 from typing import List
-from src.actions.action import Action
+from src.actions.action import Action, FeedbackMessage
 from src.actions.basic_actions import create_logging_action
+from src.common.definitions import FailureReason
 from src.execution import ActionDispatcher, LLMController
 from src.planning.plan_actions import (
     create_action_adder_for_plan,
@@ -22,6 +23,8 @@ class Planner:
         task = """Select the next actions to add to the plan or clear the plan.
         Additional Notes:
         - You will be allowed to replan in the future so you can adjust your plan as you go.
+        - If your plan requires a result from an action that has not been executed yet, then stop planning.
+        - Do not let the plan fill up with garbage
         """
         # TODO: Incorporate Saving thoughts
         self.controller = LLMController(
@@ -38,48 +41,44 @@ class NextStep(Enum):
     EXECUTE = "execute"
     FINISH = "finish"
 
+    def __str__(self):
+        return self.value
+
 
 class NextStepInput(BaseModel):
-    next_step: NextStep = Field(description="The next step to take")
+    should_continue: bool = Field(
+        description="Whether we should do another 'plan-executee' (true) loop or finish (false)."
+    )
 
 
-class DecisionMaker:
+class ShouldContinue:
     next_node: str
 
     def __init__(self) -> None:
-        next_step_action = self._create_next_step_action()
+        should_continue_action = self._create_should_continue_action()
         task = """
-        Select ONLY one of the following to do next: 'execute', 'plan' or 'finish'.
-        - 'execute': Run the next action on the top of 'Plan', i.e. #P1
-        - 'plan': Adjust the contents of 'Plan' by adding or removing actions.
-        - 'finish': Ultimate goal is satisfied. No further actions are needed.
-        
-        Additional Notes:
-        - Call `transition_to_next_node` EXACTLY ONCE.
-        - You may need to adjust your plan as you go, especially if a result from a past action should be incorporated into a future action.
-        - A message is considered printed only if it appears under the `Console` section
-        - If the 'Ultimate Goal' is to have something printed or answered, then it must appear under the `Console` section. Otherwise, you will need to plan for it to be added.
+       Decide ONLY which branch to take next:
+       - Plan-Execute branch
+       - Finish branch
+        Do not return any other information
         """
-        self.controller = LLMController([next_step_action], task)
+        self.controller = LLMController([should_continue_action], task)
 
-    def _create_next_step_action(self):
-        def transition_to_next_node(state: RefactoringAgentState, args: NextStepInput):
-            if args.next_step == NextStep.PLAN:
+    def _create_should_continue_action(self):
+        def should_continue(state: RefactoringAgentState, args: NextStepInput):
+            if args.should_continue:
                 self.next_node = "planner"
-            elif args.next_step == NextStep.EXECUTE:
-                if state["plan"]:
-                    self.next_node = "execute"
-                else:
-                    self.next_node = "planner"  # TODO: error state
+                return "Moving to planner step"
             else:
                 self.next_node = "finish"
-            return f"Transitioning to next step. "
+                return "Moving to finish step"
 
         action = Action(
-            id="transition_to_next_step",
-            description="Transition to the next step",
+            id="should_continue",
+            description="""true = plan and execute, false = finish""",
             model_cls=NextStepInput,
-            f=transition_to_next_node,
+            # return_direct=True,
+            f=should_continue,
         )
         return action
 

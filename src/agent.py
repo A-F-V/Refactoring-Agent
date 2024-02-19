@@ -5,10 +5,10 @@ from langgraph.graph import StateGraph, END
 from src.actions.code_inspection import create_code_loader
 from src.actions.code_search import create_definition_gotoer
 from src.actions.code_search import create_code_search
-from src.planning.planner import DecisionMaker, Planner
+from src.planning.planner import ShouldContinue, Planner
 from src.planning.state import RefactoringAgentState
 from .common.definitions import ProjectContext
-from .execution import ActionDispatcher, ExecuteTopOfPlan, LLMController
+from .execution import ActionDispatcher, ExecutePlan, ExecuteTopOfPlan, LLMController
 from .actions.basic_actions import create_logging_action
 
 
@@ -41,7 +41,7 @@ class RefactoringAgent:
         self.graph = StateGraph(RefactoringAgentState)
 
         self.graph.add_node("planner", Planner(action_list))
-        self.graph.add_node("execute", ExecuteTopOfPlan(action_list))
+        self.graph.add_node("execute", ExecutePlan(action_list))
         self.graph.add_node(
             "finish",
             LLMController(
@@ -49,8 +49,8 @@ class RefactoringAgent:
                 "Log any results you wish to show the user by calling print_message.",
             ),
         )
-        self.graph.add_conditional_edges("planner", DecisionMaker())
-        self.graph.add_conditional_edges("execute", DecisionMaker())
+        self.graph.add_edge("planner", "execute")
+        self.graph.add_conditional_edges("execute", ShouldContinue())
         self.graph.add_edge("finish", END)
         self.graph.set_entry_point("planner")
         # self.graph.add_node('')

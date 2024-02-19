@@ -10,7 +10,7 @@ from src.utilities.paths import add_path_to_prefix, remove_path_prefix
 
 
 def goto_symbol(context: ProjectContext, symbol: Symbol):
-    path = add_path_to_prefix(context.folder_path, symbol.file_location)
+    path = add_path_to_prefix(context.folder_path, symbol.file_path)
     line = symbol.line
     column = symbol.column
     jedi_script = jedi.Script(path=path)
@@ -27,7 +27,7 @@ def symbol_to_definition(symbol: Symbol, context: ProjectContext) -> Definition:
     (end, _) = name.get_definition_end_position()
 
     span = CodeSpan(
-        file_location=path,
+        file_path=path,
         start_line=start,
         end_line=end,
     )
@@ -39,7 +39,7 @@ def jedi_name_to_symbol(name, context: ProjectContext) -> Symbol:
     path = remove_path_prefix(name.module_path, context.folder_path)
     result = Symbol(
         name=str(name.name),
-        file_location=str(path),
+        file_path=str(path),
         line=int(line),
         column=int(column),
     )
@@ -47,7 +47,7 @@ def jedi_name_to_symbol(name, context: ProjectContext) -> Symbol:
 
 
 def load_code(span: CodeSpan, context: ProjectContext):
-    path = add_path_to_prefix(context.folder_path, span.file_location)
+    path = add_path_to_prefix(context.folder_path, span.file_path)
     start = span.start_line
     end = span.end_line
     with open(path, "r") as file:
@@ -59,7 +59,7 @@ def load_code(span: CodeSpan, context: ProjectContext):
 def span_to_snippet(span: CodeSpan, context: ProjectContext) -> CodeSnippet:
     return CodeSnippet(
         {
-            "file_path": span.file_location,
+            "file_path": span.file_path,
             "code": load_code(span, context),
             "starting_line": span.start_line,
         }

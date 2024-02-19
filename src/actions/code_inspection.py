@@ -17,21 +17,21 @@ import os
 
 
 class ReadCodeSnippetInput(BaseModel):
-    code_span: dict = Field(description="The code span to read")
+    code_span: CodeSpan = Field(description="The code span to read")
 
 
 # TODO: Error handling
 def create_code_loader():
     def code_reader(state: RefactoringAgentState, args: ReadCodeSnippetInput) -> str:
-        span = CodeSpan(**args.code_span)
+        span = args.code_span
         snippet = span_to_snippet(span, state["project_context"])
 
         state["code_snippets"].append(snippet)
-        return f"Loaded code snippet from {span.file_location} at lines {span.start_line} to {span.end_line}"
+        return f"Loaded code snippet from {span.file_path} at lines {span.start_line} to {span.end_line}"
 
     return Action(
         id="code_load",
-        description="Loads a code span from the project",
+        description="Loads a block of code as a snippet. The block loaded must be a CodeSpan type object that has been returned from a code search. The snippet will be stored in the state for later use.",
         model_cls=ReadCodeSnippetInput,
         f=code_reader,
     )

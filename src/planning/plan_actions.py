@@ -1,6 +1,7 @@
 import json
 from typing import List
-from src.common.definitions import ActionRequest, FailureReason, FeedbackMessage
+from src.actions.action import ActionRequest, FeedbackMessage
+from src.common.definitions import FailureReason
 from src.execution import ActionDispatcher
 from src.planning.state import RefactoringAgentState
 from ..actions.action import Action
@@ -33,9 +34,17 @@ def create_action_adder_for_plan(action: Action):
 
     def add_to_plan(state: RefactoringAgentState, args: AddToPlanInput):
         action_id = action.id
-        # Verify that the action's arguments are valid
         action_str = json.dumps(args.parameters)
-        request = ActionRequest(id=action_id, action_str=action_str)
+        # Verify that the action's arguments are valid
+        try:
+            p_args = action.cls(**args.parameters)
+        except Exception as e:
+            raise FeedbackMessage(
+                FailureReason.INVALID_ACTION_ARGS,
+                f"Invalid arguments for action {action_id}: {action_str}",
+            )
+
+        request = ActionRequest(id=action_id, args=p_args)
         state["plan"].append(request)
         return f"Added {action_id} with args {action_str} to plan"
 

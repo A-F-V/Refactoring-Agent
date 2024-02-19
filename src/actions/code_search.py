@@ -1,4 +1,5 @@
 import json
+from re import S
 import stat
 from typing import Optional, List
 from src.actions.action import Action
@@ -32,7 +33,7 @@ class SearchInput(BaseModel):
 
 def create_code_search():
 
-    def code_search(state: RefactoringAgentState, args: SearchInput) -> str:
+    def code_search(state: RefactoringAgentState, args: SearchInput) -> Symbol:
         folder_path = state["project_context"].folder_path
         query = args.query
         fuzzy = args.fuzzy
@@ -52,31 +53,31 @@ def create_code_search():
             jedi_name_to_symbol(completion, state["project_context"])
             for completion in completions
         ]
-        output = "\n".join(map(pydantic_to_str, output))
-        return output
+        # output = "\n".join(map(lambda x: pydantic_to_str(x, "symbol"), output))
+        return output[0]
 
     return Action(
         id="code_search",
-        description="Performs a search for a symbol in a file or folder.",
+        description="Performs a search for a symbol in a file or folder. This will not likely return the definition, so you will have to ask for that explicitly",
         model_cls=SearchInput,
         f=code_search,
     )
 
 
 class GotoDefinitionInput(BaseModel):
-    symbol: dict = Field(description="The symbol to get the definition of.")
+    symbol: Symbol = Field(description="The symbol to get the definition of.")
 
 
 # TODO: Error handling
 def create_definition_gotoer():
     def code_goto_definition(
         state: RefactoringAgentState, args: GotoDefinitionInput
-    ) -> str:
-        symbol = Symbol(**args.symbol)
+    ) -> Symbol:
+        symbol = args.symbol
 
         source_name = goto_symbol(state["project_context"], symbol)
 
-        assert len(source_name._name) == 1
+        assert len(source_name) == 1
 
         definition_name = source_name[0].goto()
 
@@ -86,7 +87,7 @@ def create_definition_gotoer():
             definition_name[0], state["project_context"]
         )
 
-        return pydantic_to_str(definition_symbol)
+        return definition_symbol
 
     return Action(
         id="code_goto_definition",

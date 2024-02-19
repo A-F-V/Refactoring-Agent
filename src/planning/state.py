@@ -1,17 +1,57 @@
 from ast import Tuple
+from langchain_core.pydantic_v1 import BaseModel, Field
 
-from typing import List, TypedDict
+from typing import Generic, List, Optional, TypeVar, TypedDict
+
 from src.common.definitions import (
-    ActionRequest,
     CodeSnippet,
-    FeedbackMessage,
+    FailureReason,
     ProjectContext,
-    feedback_to_str,
-    record_to_str,
-    request_to_str,
 )
-from src.common.definitions import ActionRecord
 from src.utilities.formatting import format_list
+
+ActionArgs = TypeVar("ActionArgs", bound=BaseModel)
+ActionReturnType = TypeVar("ActionReturnType")
+
+
+class ActionRequest(TypedDict, Generic[ActionArgs]):
+    id: str
+    args: ActionArgs
+
+
+class FeedbackMessage(Exception, Generic[ActionArgs]):
+    def __init__(
+        self,
+        failure_reason: FailureReason,
+        message: str,
+        request: Optional[ActionRequest[ActionArgs]] = None,
+    ):
+        self.reason = failure_reason
+        self.message = message
+        self.request = request
+        super().__init__(message)
+
+
+class ActionRecord(TypedDict, Generic[ActionArgs, ActionReturnType]):
+    request: ActionRequest[ActionArgs]
+    result: ActionReturnType
+
+
+def request_to_str(request: ActionRequest) -> str:
+    return f"{{\"name\":{request['id']},\"parameters\":{request['args']}}}"
+
+
+def record_to_str(record: ActionRecord) -> str:
+    # Get the name of the type of record.result
+    type_name = record["result"].__class__.__name__
+    # check if request.result is a derived class of BaseModel
+    result_str = f"{type_name}({record['result']})"
+
+    return f"{{\"request\":{request_to_str(record['request'])},\"result\":\"{result_str}\"}}"
+
+
+def feedback_to_str(feedback: FeedbackMessage) -> str:
+    return f'{{"failure-reason":{feedback.reason.value},"message":{feedback.message},"request":{request_to_str(feedback.request) if feedback.request else "none"}}}'
 
 
 class RefactoringAgentState(TypedDict):
@@ -36,15 +76,21 @@ def state_to_str(state: RefactoringAgentState) -> str:
     console_str = format_list(state["console"], "C", "Console")
     code_str = format_list(state["code_snippets"], "S", "Code Snippets")
     return f"""Goal:
-{state['goal']}
-History
+<Ultimate Goal>
+'{state["goal"]}'
+---
+<Execution History and Observations (Oldest to Newest)>
 {history_str}
-Plan
+---
+<Plan>
 {plan_str}
-Feedback
+---
+<Feedback>
 {feedback_str}
-Console
+---
+<Console>
 {console_str}
-Code
+---
+<Code Snippets>
 {code_str}
 """

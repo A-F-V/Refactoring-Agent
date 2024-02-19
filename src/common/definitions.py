@@ -1,12 +1,11 @@
 from enum import Enum
-from pydantic import BaseModel, Field
-from typing import TypedDict
+from langchain_core.pydantic_v1 import BaseModel, Field
+from typing import Optional, TypedDict
 
 
-def pydantic_to_str(request: BaseModel, with_name: bool = True) -> str:
+def pydantic_to_str(request: BaseModel, name: str) -> str:
     # get name of type
-    name = request.__class__.__name__ if with_name else ""
-    return f"{name}{request.model_dump()}"
+    return f"{{'{name}':{request.dict()}}}"
 
 
 class ProjectContext(BaseModel):
@@ -19,13 +18,13 @@ class ProjectContext(BaseModel):
 # Action Defs
 class Symbol(BaseModel):
     name: str = Field(description="The name of the symbol")
-    file_location: str = Field(description="The file location of the symbol")
+    file_path: str = Field(description="The file path of the symbol")
     line: int = Field(description="The line number of the symbol")
     column: int = Field(description="The column number of the symbol")
 
 
 class CodeSpan(BaseModel):
-    file_location: str = Field(description="The file location of the span")
+    file_path: str = Field(description="The file location of the span")
     start_line: int = Field(description="The starting line number of the span")
     end_line: int = Field(description="The ending line number of the span")
 
@@ -45,25 +44,8 @@ class ActionSuccess(Enum):
     ACTION_FAILED = "ACTION_FAILED"
 
 
-class ActionRequest(TypedDict):
-    id: str
-    action_str: str
-
-
-def request_to_str(request: ActionRequest) -> str:
-    return f"{{\"name\":{request['id']},\"parameters\":{request['action_str']}}}"
-
-
-class ActionRecord(TypedDict):
-    request: ActionRequest
-    result: str
-
-
+# can we just store the parsed action str?
 # Don't need Success?
-def record_to_str(record: ActionRecord) -> str:
-    return f"{{\"request\":{request_to_str(record['request'])},\"result\":'{record['result']}'}}"
-
-
 class FailureReason(Enum):
     ACTION_NOT_FOUND = "ACTION_NOT_FOUND"
     INVALID_ACTION_ARGS = "INVALID_ACTION_ARGS"
@@ -72,17 +54,6 @@ class FailureReason(Enum):
 
 
 # Make FeedbackMessage an Exception
-class FeedbackMessage(Exception):
-    def __init__(self, failure_reason: FailureReason, message: str):
-        self.reason = failure_reason
-        self.message = message
-        super().__init__(message)
-
-
-def feedback_to_str(feedback: FeedbackMessage) -> str:
-    return f'{{"failure-reason":{feedback.reason.value},"message":{feedback.message}}}'
-
-
 class CodeSnippet(TypedDict):
     file_path: str
     code: str
