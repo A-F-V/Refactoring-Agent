@@ -25,8 +25,6 @@ class RefactoringAgent:
 
     def _create_refactoring_actions(self):
         action_list = ActionDispatcher()
-        # General
-        action_list.register_action(create_logging_action())
         # Code Querying & Manipulation
         action_list.register_action(create_code_search())
         action_list.register_action(create_definition_getter())
@@ -42,8 +40,16 @@ class RefactoringAgent:
 
         self.graph.add_node("planner", Planner(action_list))
         self.graph.add_node("execute", ExecuteTopOfPlan(action_list))
+        self.graph.add_node(
+            "finish",
+            LLMController(
+                [create_logging_action()],
+                "Log any results you wish to show the user by calling print_message.",
+            ),
+        )
         self.graph.add_conditional_edges("planner", DecisionMaker())
         self.graph.add_conditional_edges("execute", DecisionMaker())
+        self.graph.add_edge("finish", END)
         self.graph.set_entry_point("planner")
         # self.graph.add_node('')
         self.app = self.graph.compile()

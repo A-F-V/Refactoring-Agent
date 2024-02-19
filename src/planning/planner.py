@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import List
 from src.actions.action import Action
+from src.actions.basic_actions import create_logging_action
 from src.execution import ActionDispatcher, LLMController
 from src.planning.plan_actions import (
     create_action_adder_for_plan,
@@ -19,10 +20,13 @@ class Planner:
             self.plan_dispatcher.register_action(create_action_adder_for_plan(action))
         # TODO: Stop planning
         task = """Select the next actions to add to the plan or clear the plan.
-        Note the following:
-        - The history is not visible to the user.
+        Additional Notes:
+        - You will be allowed to replan in the future so you can adjust your plan as you go.
         """
-        self.controller = LLMController(self.plan_dispatcher.get_action_list(), task)
+        # TODO: Incorporate Saving thoughts
+        self.controller = LLMController(
+            self.plan_dispatcher.get_action_list(), task, number_of_actions=3
+        )
 
     def __call__(self, state: RefactoringAgentState):
         # TODO save plan history
@@ -46,16 +50,15 @@ class DecisionMaker:
         next_step_action = self._create_next_step_action()
         task = """
         Select ONLY one of the following to do next: 'execute', 'plan' or 'finish'.
-        - 'execute': Run the next action on the top of the plan
-        - 'plan': Adjust the plan/schedule of actions to take by either adding or clearing the current plan. You will not be able to execute actions from the plan if you select this.
-        - 'finish': Finish the process. Do not call if there are still actions to take or if the goal has not been perfectly met.
+        - 'execute': Run the next action on the top of 'Plan', i.e. #P1
+        - 'plan': Adjust the contents of 'Plan' by adding or removing actions.
+        - 'finish': Ultimate goal is satisfied. No further actions are needed.
         
         Additional Notes:
-        - Transition by only 1 step at a time.
-        - Make sure the history of executed actions completes the goal in its entirety. 
-        - If you are asked a query, you must answer it by writting to the console (only achieved by calling `print-message`).
+        - Call `transition_to_next_node` EXACTLY ONCE.
         - You may need to adjust your plan as you go, especially if a result from a past action should be incorporated into a future action.
-        
+        - A message is considered printed only if it appears under the `Console` section
+        - If the 'Ultimate Goal' is to have something printed or answered, then it must appear under the `Console` section. Otherwise, you will need to plan for it to be added.
         """
         self.controller = LLMController([next_step_action], task)
 
@@ -69,8 +72,8 @@ class DecisionMaker:
                 else:
                     self.next_node = "planner"  # TODO: error state
             else:
-                self.next_node = END
-            return f"Transitioning to {self.next_node}"
+                self.next_node = "finish"
+            return f"Transitioning to next step. "
 
         action = Action(
             id="transition_to_next_step",

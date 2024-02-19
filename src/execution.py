@@ -118,11 +118,18 @@ class ExecuteTopOfPlan:
 
 
 class LLMController:
-    def __init__(self, actions: List[Action], current_task: str, verbose=True):
+    def __init__(
+        self,
+        actions: List[Action],
+        current_task: str,
+        verbose=True,
+        number_of_actions=1,
+    ):
         self.actions = actions
-        self.llm = ChatOpenAI(model="gpt-4-turbo-preview")
+        self.llm = ChatOpenAI(model="gpt-4-1106-preview")
         self.parser = JsonOutputToolsParser()
         self.current_task = current_task
+        self.number_of_actions = number_of_actions
         self.create_prompt()
         self.verbose = verbose
         # self.chain = self.prompt_template | self.llm | self.parser
@@ -133,27 +140,30 @@ class LLMController:
         self.agent_prompt = prompt
         # For Context
         # TODO: Evaluate this part
-        self.context_prompt = PromptTemplate.from_template(
-            f"""
-            Current Task: '{self.current_task}'
+        message = f"""
+            <Current Task>
+            '{self.current_task}'
             ---
-            Ultimate Goal: '{{goal}}'
+            <Ultimate Goal>
+            '{{goal}}'
             ---
-            Execution History and Observations (Oldest to Newest): 
+            <Execution History and Observations (Oldest to Newest)>
             {{history}}
             ---
-            Current Plan: 
+            <Plan>
             {{plan}}
             ---
-            Feedback:
+            <Feedback>
             {{feedback}}
             ---
-            Console:
+            <Console>
             {{console}}
             ---
-            Now invoke suitable functions to complete the Current Task
+            Now invoke suitable functions to complete the Current Task. 
+            Do not send other messages other than invoking functions.
+            Invoke no more than {self.number_of_actions} function calls to complete the task.
             """
-        )
+        self.context_prompt = PromptTemplate.from_template(message)
 
     def format_context_prompt(self, state: RefactoringAgentState) -> str:
         history = map(record_to_str, state["history"])
@@ -173,6 +183,7 @@ class LLMController:
         )
         if self.verbose:
             print(message_sent)
+            pass
         return message_sent
 
     def get_openai_tools(self, state):

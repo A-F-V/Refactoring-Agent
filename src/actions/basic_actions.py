@@ -21,7 +21,7 @@ def create_logging_action():
         return f"Logged '{msg}'"
 
     action = Action(
-        id="print-message",
+        id="print_message",
         description="Print a message to the dedicated `Console`",
         model_cls=LoggingInput,
         f=log,
