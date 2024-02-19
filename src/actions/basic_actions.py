@@ -1,3 +1,4 @@
+import click
 from ..execution import ActionDispatcher
 from .action import Action
 from langchain_core.pydantic_v1 import BaseModel, Field
@@ -12,7 +13,7 @@ class LoggingInput(BaseModel):
 
 def create_logging_action():
     def log(state, args: LoggingInput):
-        print(args.message)
+        print(args, flush=True)
         return "Logged message"
 
     action = Action(

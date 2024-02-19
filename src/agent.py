@@ -41,11 +41,12 @@ class RefactoringAgent:
         # self.graph.add_node('')
         self.app = self.graph.compile()
 
-    def run(self, input: str, context: ProjectContext):
+    def run(self, input: str, context: ProjectContext) -> RefactoringAgentState:
         state: RefactoringAgentState = {
             "goal": input,
             "project_context": context,
             "history": [],
             "plan": [],
+            "feedback": [],
         }
-        return self.app.invoke(state)
+        return RefactoringAgentState(**self.app.invoke(state))

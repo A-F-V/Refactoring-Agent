@@ -15,7 +15,7 @@ class Planner:
     def __init__(self, action_list: List[Action]):
         self.plan_dispatcher = ActionDispatcher()
         self.plan_dispatcher.register_action(create_clear_plan_action())
-        self.plan_dispatcher.register_action(create_add_to_plan_action())
+        self.plan_dispatcher.register_action(create_add_to_plan_action(action_list))
         # TODO: Stop planning
         task = "Plan the next actions to take to achieve the ultimate goal"
         self.controller = LLMController(self.plan_dispatcher.get_action_list(), task)
@@ -36,32 +36,34 @@ class NextStepInput(BaseModel):
 
 
 class DecisionMaker:
+    next_node: str
+
     def __init__(self) -> None:
         next_step_action = self._create_next_step_action()
-        task = "Select whether to plan, execute, or finish"
+        task = "Select whether to plan, execute, or finish. You must only choose one to do right now. Select finish when there is no work in the plan to execute."
         self.controller = LLMController([next_step_action], task)
 
-    @staticmethod
-    def _create_next_step_action():
-        def transition_to_next_step(state: RefactoringAgentState, args: NextStepInput):
+    def _create_next_step_action(self):
+        def transition_to_next_node(state: RefactoringAgentState, args: NextStepInput):
             if args.next_step == NextStep.PLAN:
-                return "planner"
+                self.next_node = "planner"
             elif args.next_step == NextStep.EXECUTE:
                 if state["plan"]:
-                    return "execute"
+                    self.next_node = "execute"
                 else:
-                    return END  # TODO: error state
+                    self.next_node = END  # TODO: error state
             else:
-                return END
+                self.next_node = END
+            return f"Transitioning to {self.next_node}"
 
         action = Action(
             id="transition_to_next_step",
             description="Transition to the next step",
             model_cls=NextStepInput,
-            f=transition_to_next_step,
+            f=transition_to_next_node,
         )
         return action
 
     def __call__(self, state: RefactoringAgentState):
         state, decision = self.controller.run(state)
-        return decision
+        return self.next_node

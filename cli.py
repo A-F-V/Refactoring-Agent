@@ -4,6 +4,7 @@ import dotenv
 import pygit2 as git
 from src.agent import RefactoringAgent
 from src.common.definitions import ProjectContext
+from src.planning.state import state_to_str
 
 dotenv.load_dotenv()
 
@@ -44,7 +45,7 @@ def run(repo: str):
 
     context = ProjectContext(folder_path=repo)
     agent = RefactoringAgent()
-    click.echo(agent.run(query, context))
+    click.echo(state_to_str(agent.run(query, context)))
 
 
 cli.add_command(init_repo)

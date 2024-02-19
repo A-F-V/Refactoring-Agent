@@ -45,7 +45,34 @@ class ActionRequest(TypedDict):
     action_str: str
 
 
+def request_to_str(request: ActionRequest) -> str:
+    return f"{{\"name\":{request['id']},\"parameters\":{request['action_str']}}}"
+
+
 class ActionRecord(TypedDict):
     request: ActionRequest
     success: ActionSuccess
     observation: str
+
+
+# Don't need Success?
+def record_to_str(record: ActionRecord) -> str:
+    return f"{{\"request\":{request_to_str(record['request'])},\"success\":{record['success'].value},\"observation\":{record['observation']}}}"
+
+
+class FailureReason(Enum):
+    ACTION_NOT_FOUND = "ACTION_NOT_FOUND"
+    INVALID_ACTION_ARGS = "INVALID_ACTION_ARGS"
+    ACTION_FAILED = "ACTION_FAILED"
+
+
+# Make FeedbackMessage an Exception
+class FeedbackMessage(Exception):
+    def __init__(self, failure_reason: FailureReason, message: str):
+        self.reason = failure_reason
+        self.message = message
+        super().__init__(message)
+
+
+def feedback_to_str(feedback: FeedbackMessage) -> str:
+    return f'{{"failure-reason":{feedback.reason.value},"message":{feedback.message}}}'

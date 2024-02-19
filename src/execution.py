@@ -16,9 +16,17 @@ from langchain.output_parsers.openai_tools import JsonOutputToolsParser
 from langchain_core.output_parsers import JsonOutputParser
 from langchain import hub
 from langchain.agents import AgentExecutor, create_openai_tools_agent
-from src.common.definitions import ActionSuccess, ActionRequest, ActionRecord
+from src.common.definitions import (
+    ActionSuccess,
+    ActionRequest,
+    ActionRecord,
+    feedback_to_str,
+    record_to_str,
+    request_to_str,
+)
 
 from src.planning.state import RefactoringAgentState
+from src.utilities.formatting import format_list
 
 
 class ActionDispatcher:
@@ -132,22 +140,32 @@ class LLMController:
             ---
             Ultimate Goal: '{{goal}}'
             ---
-            History: {{history}}
+            History: 
+            {{history}}
             ---
-            Plan: {{plan}}
+            Current Plan: 
+            {{plan}}
             ---
-            
+            Feedback:
+            {{feedback}}
+            ---
             Now invoke suitable functions to complete the Current Task
             """
         )
 
     def format_context_prompt(self, state: RefactoringAgentState) -> str:
-        history = list(map(json.dumps, state["history"]))
-        plan = list(map(json.dumps, state["plan"]))
+        history = map(record_to_str, state["history"])
+        plan = map(request_to_str, state["plan"])
+        feedback = map(feedback_to_str, state["feedback"])
+
+        plan_str = format_list(plan, "P", "Plan")
+        history_str = format_list(history, "H", "History")
+        feedback_str = format_list(feedback, "F", "Feedback")
         message_sent = self.context_prompt.format(
             goal=state["goal"],
-            history=str(history),
-            plan=str(plan),
+            history=history_str,
+            plan=plan_str,
+            feedback=feedback_str,
         )
         if self.verbose:
             print(message_sent)
