@@ -2,10 +2,13 @@ import json
 import stat
 from typing import Optional, List
 from src.actions.action import Action
-from src.common.definitions import pydantic_to_str
+from src.actions.code_inspection import get_body_of_symbol
+from src.common import Symbol
+from src.common.definitions import Definition, pydantic_to_str
 
 from src.planning.state import RefactoringAgentState
-from src.utilities.paths import remove_path_prefix
+from src.utilities.jedi_utils import goto_symbol, jedi_name_to_symbol
+from src.utilities.paths import add_path_to_prefix, remove_path_prefix
 from ..common import ProjectContext, Symbol
 
 from langchain.pydantic_v1 import BaseModel, Field
@@ -29,16 +32,6 @@ class SearchInput(BaseModel):
 
 
 def create_code_search():
-    def parse_completion_to_symbol(completion, context: ProjectContext) -> Symbol:
-        (line, column) = completion.line, completion.column
-        path = remove_path_prefix(completion.module_path, context.folder_path)
-        result = Symbol(
-            name=str(completion.name),
-            file_location=str(path),
-            line=int(line),
-            column=int(column),
-        )
-        return result
 
     def code_search(state: RefactoringAgentState, args: SearchInput) -> str:
         folder_path = state["project_context"].folder_path
@@ -57,10 +50,9 @@ def create_code_search():
 
         completions = list(searcher.complete_search(query, fuzzy=fuzzy))
         output = [
-            parse_completion_to_symbol(completion, state["project_context"])
+            jedi_name_to_symbol(completion, state["project_context"])
             for completion in completions
         ]
-        # Todo: make the path relative to the project
         output = "\n".join(map(pydantic_to_str, output))
         return output
 
@@ -69,4 +61,37 @@ def create_code_search():
         description="Performs a search for a symbol in a file or folder.",
         model_cls=SearchInput,
         f=code_search,
+    )
+
+
+class GotoDefinitionInput(BaseModel):
+    symbol: dict = Field(description="The symbol to get the definition of.")
+
+
+# TODO: Error handling
+def create_definition_gotoer():
+    def code_goto_definition(
+        state: RefactoringAgentState, args: GotoDefinitionInput
+    ) -> str:
+        symbol = Symbol(**args.symbol)
+
+        source_name = goto_symbol(state["project_context"], symbol)
+
+        assert len(source_name._name) == 1
+
+        definition_name = source_name[0].goto()
+
+        assert len(definition_name) == 1
+
+        definition_symbol = jedi_name_to_symbol(
+            definition_name[0], state["project_context"]
+        )
+
+        return pydantic_to_str(definition_symbol)
+
+    return Action(
+        id="code_goto_definition",
+        description="Goes the definition of a symbol in the project",
+        model_cls=GotoDefinitionInput,
+        f=code_goto_definition,
     )
