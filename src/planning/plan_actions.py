@@ -1,6 +1,6 @@
 import json
 from typing import List
-from src.common.definitions import ActionRequest
+from src.common.definitions import ActionRequest, FailureReason, FeedbackMessage
 from src.execution import ActionDispatcher
 from src.planning.state import RefactoringAgentState
 from ..actions.action import Action
@@ -39,16 +39,21 @@ def create_add_to_plan_action(action_list: List[Action]):
         # Verify that the action exists
         if action_id not in available_ids:
             # TODO: Correct exception handling
-            return f"Action {action_id} does not exist"
+            raise FeedbackMessage(
+                FailureReason.ACTION_NOT_FOUND,
+                f"Action {action_id} not found from {available_ids}",
+            )
         action_str = json.dumps(args.parameters)
         request = ActionRequest(id=action_id, action_str=action_str)
         state["plan"].append(request)
         return f"Added {action_id} with args {action_str} to plan"
 
-    # TODO: Eval this part
-    description = """
-        Add an action to the plan
+    action_list_str = "\n".join(map(str, action_list))
+    description = f"""
+        Add an action to the plan from the following:
+        {action_list_str}
         """
+    print(description)
     action = Action(
         id="add_to_plan",
         description=description,

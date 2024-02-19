@@ -40,7 +40,14 @@ class DecisionMaker:
 
     def __init__(self) -> None:
         next_step_action = self._create_next_step_action()
-        task = "Select whether to plan, execute, or finish. You must only choose one to do right now. Select finish when there is no work in the plan to execute."
+        task = """
+        Select ONLY one of the following to do next: 'execute', 'plan' or 'finish'.
+        - 'execute': Run the next action on the top of the plan
+        - 'plan': Adjust the plan/schedule of actions to take by either adding or clearing the current plan. You will not be able to execute actions from the plan if you select this.
+        - 'finish': Finish the process. Do not call if there are still actions to take.
+        
+        Transition by only 1 step at a time.
+        """
         self.controller = LLMController([next_step_action], task)
 
     def _create_next_step_action(self):

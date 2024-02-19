@@ -1,4 +1,5 @@
 import json
+from nis import cat
 import sys
 from tabnanny import verbose
 from typing import Dict, List
@@ -20,6 +21,8 @@ from src.common.definitions import (
     ActionSuccess,
     ActionRequest,
     ActionRecord,
+    FailureReason,
+    FeedbackMessage,
     feedback_to_str,
     record_to_str,
     request_to_str,
@@ -77,20 +80,13 @@ class ActionDispatcher:
                 observation = action.execute(state, action_str)
                 return ActionRecord(
                     request=request,
-                    success=ActionSuccess.SUCCESS,
-                    observation=observation,
+                    result=observation,
                 )
             except Exception as e:
-                return ActionRecord(
-                    request=request,
-                    success=ActionSuccess.ACTION_FAILED,
-                    observation=str(e),
-                )
+                raise FeedbackMessage(FailureReason.ACTION_FAILED, str(e))
         else:
-            return ActionRecord(
-                request=request,
-                success=ActionSuccess.ACTION_NOT_FOUND,
-                observation="",
+            raise FeedbackMessage(
+                FailureReason.ACTION_NOT_FOUND, f"Action {id} not found"
             )
 
 
@@ -103,15 +99,18 @@ class ExecuteTopOfPlan:
     def __call__(self, state: RefactoringAgentState):
         # Check if there is an action at the top of the plan
         plan = state["plan"]
-        if len(plan) == 0:
-            raise Exception("No actions in the plan")
-        action = plan[0]
-        # Dispatch the action
-        record = self.dispatcher.dispatch(state, action)
-        # Save the result
-        state["history"].append(record)
-        # Remove the action from the plan
-        state["plan"] = plan[1:]
+        try:
+            if len(plan) == 0:
+                raise FeedbackMessage(FailureReason.EMPTY_PLAN, "Plan is empty")
+            action = plan[0]
+            # Remove the action from the plan
+            state["plan"] = plan[1:]
+            # Dispatch the action
+            record = self.dispatcher.dispatch(state, action)
+            # Save the result
+            state["history"].append(record)
+        except FeedbackMessage as f:
+            state["feedback"].append(f)
         return state
 
 

@@ -1,4 +1,9 @@
+import json
+import stat
 from typing import Optional, List
+from src.actions.action import Action
+
+from src.planning.state import RefactoringAgentState
 from ..common import ProjectContext, Symbol, parse_completion_to_symbol
 
 from langchain.pydantic_v1 import BaseModel, Field
@@ -21,40 +26,33 @@ class SearchInput(BaseModel):
     )
 
 
-def create_code_search(context: ProjectContext):
-    @tool("code-symbol-search", args_schema=SearchInput)
-    def code_search(
-        query: str,
-        fuzzy: bool = False,
-        file_path: Optional[str] = None,
-    ) -> List[Symbol]:
-        """
-        Performs a search for a symbol in a file or folder.
-        """
+def create_code_search():
+    def code_search(state: RefactoringAgentState, args: SearchInput) -> str:
+        folder_path = state["project_context"].folder_path
+        query = args.query
+        fuzzy = args.fuzzy
+        file_path = args.file_path
+
         # searcher
         if file_path is None:
             # folder path
-            searcher = jedi.Project(context.folder_path)
+            searcher = jedi.Project(folder_path)
         else:
             # folder path / file path
-            path = os.path.join(context.folder_path, file_path)
+            path = os.path.join(folder_path, file_path)
             searcher = jedi.Script(path=path)
 
         completions = list(searcher.complete_search(query, fuzzy=fuzzy))
 
         print(completions)
-        return [parse_completion_to_symbol(completion) for completion in completions]
+        output = [parse_completion_to_symbol(completion) for completion in completions]
+        output = "\n".join([json.dumps(x) for x in output])
+        print(output)
+        return output
 
-    return code_search
-
-
-# Create a search toolkita
-
-
-class CodeSearchToolkit:
-
-    def __init__(self, context: ProjectContext):
-        self.context = context
-
-    def get_tools(self):
-        return [create_code_search(self.context)]
+    return Action(
+        id="code_search",
+        description="Performs a search for a symbol in a file or folder.",
+        model_cls=SearchInput,
+        f=code_search,
+    )

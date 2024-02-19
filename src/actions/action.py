@@ -35,8 +35,10 @@ class Action(Generic[ActionArgs]):
         self.cls = model_cls
 
     def execute(self, state: RefactoringAgentState, action_str: str) -> str:
-        action_args = self.parser.invoke(action_str)
-        result = self.f(state, action_args)
+        # TODO: error handling
+        action_args_kwargs = self.parser.invoke(action_str)
+        args = self.cls(**action_args_kwargs)
+        result = self.f(state, args)
         return result
 
     def to_tool(self, state: RefactoringAgentState) -> StructuredTool:
@@ -48,6 +50,8 @@ class Action(Generic[ActionArgs]):
                     raise FeedbackMessage(FailureReason.INVALID_ACTION_ARGS, str(e))
                 try:
                     return self.f(state, args)
+                except FeedbackMessage as f:
+                    raise f
                 except Exception as e:
                     raise FeedbackMessage(FailureReason.ACTION_FAILED, str(e))
             except FeedbackMessage as f:
@@ -61,6 +65,4 @@ class Action(Generic[ActionArgs]):
         )
 
     def __str__(self):
-        return f"""Action: {self.id}
-                Description: {self.description}
-                Args: {self.cls.schema()}"""
+        return f"""{{"name": '{self.id}', "description": '{self.description}', "parameters": {self.cls.schema()['properties']}}}"""

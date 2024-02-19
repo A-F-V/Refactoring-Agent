@@ -51,19 +51,19 @@ def request_to_str(request: ActionRequest) -> str:
 
 class ActionRecord(TypedDict):
     request: ActionRequest
-    success: ActionSuccess
-    observation: str
+    result: str
 
 
 # Don't need Success?
 def record_to_str(record: ActionRecord) -> str:
-    return f"{{\"request\":{request_to_str(record['request'])},\"success\":{record['success'].value},\"observation\":{record['observation']}}}"
+    return f"{{\"request\":{request_to_str(record['request'])},\"result\":{record['result']}}}"
 
 
 class FailureReason(Enum):
     ACTION_NOT_FOUND = "ACTION_NOT_FOUND"
     INVALID_ACTION_ARGS = "INVALID_ACTION_ARGS"
     ACTION_FAILED = "ACTION_FAILED"
+    EMPTY_PLAN = "EMPTY_PLAN"
 
 
 # Make FeedbackMessage an Exception
