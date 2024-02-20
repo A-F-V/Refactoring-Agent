@@ -41,7 +41,7 @@ def run(repo: str):
     click.echo("Running the demo")
 
     code_path = "edit_distance/edit_distance.py"
-    query = f"Print the body of any function starting with 'lowest' in {code_path}. I only want to python docstring."
+    query = f"In the file {code_path}, get me line number of the function called `lowest_...` and tell me the return type.  Please also give me a bullet point list of code changes to improve the readability of the function."
 
     context = ProjectContext(folder_path=repo)
     agent = RefactoringAgent()

@@ -21,7 +21,7 @@ def goto_symbol(context: ProjectContext, symbol: Symbol):
 def symbol_to_definition(symbol: Symbol, context: ProjectContext) -> Definition:
     name = goto_symbol(context, symbol)
     # Load the file
-    path = name.module_path
+    path = remove_path_prefix(name.module_path, context.folder_path)
 
     (start, _) = name.get_definition_start_position()
     (end, _) = name.get_definition_end_position()
@@ -53,14 +53,20 @@ def load_code(span: CodeSpan, context: ProjectContext):
     with open(path, "r") as file:
         code = file.readlines()
         #    Get the code
-        return "\n".join(code[start - 1 : end + 1])
+        return "".join(code[start - 1 : end + 1])
+
+
+def add_line_numbers(code: str, starting_line: int) -> str:
+    lines = code.split("\n")
+    line_numbers = [f"{starting_line + i}" for i in range(len(lines))]
+    return "\n".join([f"{line_numbers[i]}: {lines[i]}" for i in range(len(lines))])
 
 
 def span_to_snippet(span: CodeSpan, context: ProjectContext) -> CodeSnippet:
     return CodeSnippet(
         {
             "file_path": span.file_path,
-            "code": load_code(span, context),
+            "code": add_line_numbers(load_code(span, context), span.start_line),
             "starting_line": span.start_line,
         }
     )

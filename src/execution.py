@@ -128,6 +128,12 @@ class ExecutePlan:
 
 # Given a prompt, the LLMControler will dispatch a suitable action
 
+default_instructions = """
+Now invoke suitable functions to complete the Current Task. 
+Arguments for the functions should be constructed from the context provided, including from the output of past actions.
+Do not send other messages other than invoking functions.
+"""
+
 
 class LLMController:
     def __init__(
@@ -135,15 +141,14 @@ class LLMController:
         actions: List[Action],
         current_task: str,
         verbose=True,
-        number_of_actions=1,
+        additional_instructions=default_instructions,
     ):
         self.actions = actions
         self.llm = ChatOpenAI(model="gpt-4-1106-preview")
-        self.parser = JsonOutputToolsParser()
         self.current_task = current_task
-        self.number_of_actions = number_of_actions
-        self.create_prompt()
         self.verbose = verbose
+        self.additional_instructions = additional_instructions
+        self.create_prompt()
         # self.chain = self.prompt_template | self.llm | self.parser
 
     def create_prompt(self):
@@ -152,16 +157,13 @@ class LLMController:
         self.agent_prompt = prompt
         # For Context
         # TODO: Evaluate this part
-        message = f"""
-<Current Task>
+        message = f"""### Instructions ###
 '{self.current_task}'
 ---
 {{state}}
 ---
-Now invoke suitable functions to complete the Current Task. 
-Arguments for the functions should be constructed from the context provided, including from the output of past actions.
-Do not send other messages other than invoking functions.
-Invoke no more than {self.number_of_actions} function calls to complete the task.
+### Additional Comments ###
+{self.additional_instructions}
 """
         self.context_prompt = PromptTemplate.from_template(message)
 
@@ -178,6 +180,16 @@ Invoke no more than {self.number_of_actions} function calls to complete the task
         return list(tools)
 
     def run(self, state: RefactoringAgentState):
+        if len(self.actions) == 0:
+            return self.run_without_tools(state)
+        else:
+            return self.run_with_tools(state)
+
+    def run_without_tools(self, state):
+        output = self.llm.invoke(self.format_context_prompt(state))
+        return state, output.content
+
+    def run_with_tools(self, state):
         tools = self.get_openai_tools(state)
 
         # Construct the OpenAI Tools agent

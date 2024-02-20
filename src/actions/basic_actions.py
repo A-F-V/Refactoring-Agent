@@ -27,3 +27,20 @@ def create_logging_action():
         f=log,
     )
     return action
+
+
+class DoNothing(BaseModel):
+    pass
+
+
+def create_no_op_action(id: str, description: str, result="No operation performed"):
+    def no_op(state: RefactoringAgentState, args: DoNothing):
+        return result
+
+    action = Action(
+        id=id,
+        description=description,
+        model_cls=DoNothing,
+        f=no_op,
+    )
+    return action

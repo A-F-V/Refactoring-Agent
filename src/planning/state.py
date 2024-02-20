@@ -5,10 +5,13 @@ from typing import Generic, List, Optional, TypeVar, TypedDict
 
 from src.common.definitions import (
     CodeSnippet,
+    CodeSpan,
     FailureReason,
     ProjectContext,
+    snippet_to_str,
 )
 from src.utilities.formatting import format_list
+from src.utilities.jedi_utils import span_to_snippet
 
 ActionArgs = TypeVar("ActionArgs", bound=BaseModel)
 ActionReturnType = TypeVar("ActionReturnType")
@@ -62,35 +65,37 @@ class RefactoringAgentState(TypedDict):
     # TODO: Feedback of failed actions
     feedback: List[FeedbackMessage]
     console: List[str]
-    code_snippets: List[CodeSnippet]
+    code_blocks: List[CodeSpan]
+    thoughts: List[str]
 
 
 def state_to_str(state: RefactoringAgentState) -> str:
     history = map(record_to_str, state["history"])
     plan = map(request_to_str, state["plan"])
     feedback = map(feedback_to_str, state["feedback"])
+    snippets = map(
+        lambda s: snippet_to_str(span_to_snippet(s, state["project_context"])),
+        state["code_blocks"],
+    )
 
-    plan_str = format_list(plan, "P", "Plan")
+    # plan_str = format_list(plan, "P", "Plan")
+    # console_str = format_list(state["console"], "C", "Console")
     history_str = format_list(history, "H", "History")
     feedback_str = format_list(feedback, "F", "Feedback")
-    console_str = format_list(state["console"], "C", "Console")
-    code_str = format_list(state["code_snippets"], "S", "Code Snippets")
-    return f"""Goal:
-<Ultimate Goal>
+    thoughts_str = format_list(state["thoughts"], "T", "Thoughts")
+    code_str = format_list(snippets, "CODE-BLOCK-", "Code Snippets")
+    return f"""### Main Goal ###
 '{state["goal"]}'
 ---
-<Execution History and Observations (Oldest to Newest)>
+### Execution History and Observations (Oldest to Newest) ###
 {history_str}
 ---
-<Plan>
-{plan_str}
+### Thoughts (Oldest to Newest) ###
+{thoughts_str}
 ---
-<Feedback>
+### Feedback ###
 {feedback_str}
 ---
-<Console>
-{console_str}
----
-<Code Snippets>
+### Code Snippets ###
 {code_str}
 """

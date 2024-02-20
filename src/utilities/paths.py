@@ -12,6 +12,6 @@ def remove_path_prefix(path: str, prefix: str) -> str:
 
 
 def add_path_to_prefix(prefix: str, path: str):
-    if path.startswith("/"):
+    if path.startswith("/") or path.startswith("\\"):
         return os.path.join(prefix, path[1:])
     return os.path.join(prefix, path)

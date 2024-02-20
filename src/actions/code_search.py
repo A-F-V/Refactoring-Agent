@@ -7,7 +7,12 @@ from src.common import Symbol
 from src.common.definitions import Definition, pydantic_to_str
 
 from src.planning.state import RefactoringAgentState
-from src.utilities.jedi_utils import goto_symbol, jedi_name_to_symbol
+from src.utilities.jedi_utils import (
+    goto_symbol,
+    jedi_name_to_symbol,
+    span_to_snippet,
+    symbol_to_definition,
+)
 from src.utilities.paths import add_path_to_prefix, remove_path_prefix
 from ..common import ProjectContext, Symbol
 
@@ -33,8 +38,11 @@ class SearchInput(BaseModel):
 
 def create_code_search():
 
-    def code_search(state: RefactoringAgentState, args: SearchInput) -> Symbol:
-        folder_path = state["project_context"].folder_path
+    def code_search(
+        state: RefactoringAgentState, args: SearchInput
+    ) -> List[Definition]:
+        context = state["project_context"]
+        folder_path = context.folder_path
         query = args.query
         fuzzy = args.fuzzy
         file_path = args.file_path
@@ -49,16 +57,20 @@ def create_code_search():
             searcher = jedi.Script(path=path)
 
         completions = list(searcher.complete_search(query, fuzzy=fuzzy))
-        output = [
-            jedi_name_to_symbol(completion, state["project_context"])
-            for completion in completions
+        symbols = [
+            jedi_name_to_symbol(completion, context) for completion in completions
         ]
-        # output = "\n".join(map(lambda x: pydantic_to_str(x, "symbol"), output))
-        return output[0]
+        definitions = list(map(lambda s: symbol_to_definition(s, context), symbols))
+
+        # Save the code snippets
+        for definition in definitions:
+            state["code_blocks"].append(definition.span)
+
+        return definitions
 
     return Action(
         id="code_search",
-        description="Performs a search for a symbol in a file or folder. This will not likely return the definition, so you will have to ask for that explicitly",
+        description="Performs a search for a the definition of a symbol in a file or folder. Stores the definitions under the '<Code Snippets>' block",
         model_cls=SearchInput,
         f=code_search,
     )
