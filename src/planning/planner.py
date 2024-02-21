@@ -40,19 +40,36 @@ class Planner:
 
 class Thinker:
     def __init__(self):
+
+        def create_thought():
+            class NewThought(BaseModel):
+                thought: str = Field(
+                    description="The thought to add to the thoughts list"
+                )
+
+            def thought(state: RefactoringAgentState, args: NewThought):
+                state["thoughts"].append(args.thought)
+
+            action = Action(
+                id="add_thought",
+                description="Add a thought to the thoughts list.",
+                model_cls=NewThought,
+                f=thought,
+            )
+            return action
+
         task = """Reflect on the current state and write a brief thought to help your future self."""
-        additional_instructions = """After thinking, you will be prompted to select some actions to execute. You should consider what actions you have already executed before and factor that into your advice. You will be given more opportunities to think and execute in the future, so keep your thoughts extremely brief.
-        For Example:
-        `Search for function, read the definition, and extract the function signature`
-        """
+        additional_instructions = """Use this as a way to plan your next steps, reflect on what went well and how you can improve. Be incredibly brief (1-2 sentences). 
+        Call the add_thought function to add a thought to the thoughts list. Say 'Done' after you have added your thought."""
         self.controller = LLMController(
-            [], task, additional_instructions=additional_instructions
+            [create_thought()],
+            task,
+            additional_instructions=additional_instructions,
+            record_history=False,
         )
 
     def __call__(self, state: RefactoringAgentState):
-        _, thought = self.controller.run(state)
-        state["thoughts"].append(thought)
-        return state
+        return self.controller(state)
 
 
 class NextStep(Enum):
@@ -76,25 +93,23 @@ class ShouldContinue:
     def __init__(self) -> None:
         should_continue_action = self._create_should_continue_action()
         task = """Decide whether to think & execute again or finish. """
-        additional_instructions = """Decide ONLY which branch to take next:
-       - Think-Execute branch
-       - Finish branch
-        Do not return reply with any information or reasoning.
-        Execute exactly one function"""
+        additional_instructions = """
+        Call the `should_continue` function with a true boolean to continue thinking & executing, and false to finish. Say 'Done' after you have added your thought.."""
         self.controller = LLMController(
             [should_continue_action],
             task,
             additional_instructions=additional_instructions,
+            record_history=False,
         )
 
     def _create_should_continue_action(self):
         def should_continue(state: RefactoringAgentState, args: NextStepInput):
             if args.should_continue:
                 self.next_node = "think"
-                return "Moving to thinking step"
+                return "Wait for further instructions."
             else:
                 self.next_node = "finish"
-                return "Moving to finish step"
+                return "Wait for further instructions."
 
         action = Action(
             id="should_continue",
@@ -113,9 +128,13 @@ class ShouldContinue:
 class LLMExecutor:
     def __init__(self, action_list: List[Action]):
         task = """Select the next actions to execute."""
-        additional_instructions = """You will be allowed to execute actions in the future, so do not worry about executing all the actions at once."""
+        additional_instructions = """You will be allowed to execute actions in the future, so do not worry about executing all the actions at once.
+        Call any of the available functions. Say 'Done' after you are done invoking functions."""
         self.executor = LLMController(
-            action_list, task, additional_instructions=additional_instructions
+            action_list,
+            task,
+            additional_instructions=additional_instructions,
+            record_history=True,
         )
 
     def __call__(self, state: RefactoringAgentState):

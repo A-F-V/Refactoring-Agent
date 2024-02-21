@@ -142,12 +142,14 @@ class LLMController:
         current_task: str,
         verbose=True,
         additional_instructions=default_instructions,
+        record_history=True,
     ):
         self.actions = actions
         self.llm = ChatOpenAI(model="gpt-4-1106-preview")
         self.current_task = current_task
         self.verbose = verbose
         self.additional_instructions = additional_instructions
+        self.record_history = record_history
         self.create_prompt()
         # self.chain = self.prompt_template | self.llm | self.parser
 
@@ -175,7 +177,27 @@ class LLMController:
         return message_sent
 
     def get_openai_tools(self, state):
-        tools = map(lambda x: x.to_tool(state), self.actions)
+        actions = self.actions
+        if self.record_history:
+
+            def wrap_with_history(action: Action):
+                def wrapped_action(state: RefactoringAgentState, args):
+                    result = action.execute(state, args)
+                    request = ActionRequest(id=action.id, args=args)
+                    state["history"].append(
+                        ActionRecord(request=request, result=result)
+                    )
+                    return result
+
+                return Action(
+                    id=action.id,
+                    description=action.description,
+                    model_cls=action.cls,
+                    f=wrapped_action,
+                )
+
+            actions = map(wrap_with_history, actions)
+        tools = map(lambda x: x.to_tool(state), actions)
         # open_ai_tools = map(convert_to_openai_function, tools)
         return list(tools)
 

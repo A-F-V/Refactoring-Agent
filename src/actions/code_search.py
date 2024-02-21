@@ -1,6 +1,3 @@
-import json
-from re import S
-import stat
 from typing import Optional, List
 from src.actions.action import Action
 from src.common import Symbol
@@ -38,9 +35,7 @@ class SearchInput(BaseModel):
 
 def create_code_search():
 
-    def code_search(
-        state: RefactoringAgentState, args: SearchInput
-    ) -> List[Definition]:
+    def code_search(state: RefactoringAgentState, args: SearchInput) -> str:
         context = state["project_context"]
         folder_path = context.folder_path
         query = args.query
@@ -66,7 +61,7 @@ def create_code_search():
         for definition in definitions:
             state["code_blocks"].append(definition.span)
 
-        return definitions
+        return f"Found {len(definitions)} definitions for {query}. Stored under the '<Code Snippets>' block."
 
     return Action(
         id="code_search",

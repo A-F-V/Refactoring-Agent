@@ -3,6 +3,7 @@ from langchain.agents import AgentExecutor, create_openai_functions_agent
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 from src.actions.code_inspection import create_code_loader
+from src.actions.code_manipulation import create_apply_change
 from src.actions.code_search import create_definition_gotoer
 from src.actions.code_search import create_code_search
 from src.planning.planner import LLMExecutor, ShouldContinue, Planner, Thinker
@@ -23,6 +24,7 @@ class RefactoringAgent:
         action_list = ActionDispatcher()
         # Code Querying & Manipulation
         action_list.register_action(create_code_search())
+        action_list.register_action(create_apply_change())
         # action_list.register_action(create_definition_gotoer())
         # action_list.register_action(create_code_loader())
         # Git
@@ -61,5 +63,5 @@ class RefactoringAgent:
             "code_blocks": [],
             "thoughts": [],
         }
-        config = RunnableConfig(recursion_limit=50)
+        config = RunnableConfig(recursion_limit=10)
         return RefactoringAgentState(**self.app.invoke(state, config=config))
