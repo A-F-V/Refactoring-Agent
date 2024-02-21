@@ -49,6 +49,7 @@ class Thinker:
 
             def thought(state: RefactoringAgentState, args: NewThought):
                 state["thoughts"].append(args.thought)
+                return 'Say "Done"'
 
             action = Action(
                 id="add_thought",
@@ -93,8 +94,7 @@ class ShouldContinue:
     def __init__(self) -> None:
         should_continue_action = self._create_should_continue_action()
         task = """Decide whether to think & execute again or finish. """
-        additional_instructions = """
-        Call the `should_continue` function with a true boolean to continue thinking & executing, and false to finish. Say 'Done' after you have added your thought.."""
+        additional_instructions = """Call the `should_continue` function with a true boolean to continue thinking & executing, and false to finish. Say 'Done' after you have called `should_continue`. Call `should_continue` only once."""
         self.controller = LLMController(
             [should_continue_action],
             task,
@@ -104,16 +104,16 @@ class ShouldContinue:
 
     def _create_should_continue_action(self):
         def should_continue(state: RefactoringAgentState, args: NextStepInput):
+            message = f"You said should_continue={args.should_continue}. Wait for further instructions and do not invoke any functions including `should_continue`. Simply say 'Done'"
             if args.should_continue:
                 self.next_node = "think"
-                return "Wait for further instructions."
             else:
                 self.next_node = "finish"
-                return "Wait for further instructions."
+            return message
 
         action = Action(
             id="should_continue",
-            description="""true = think and execute, false = finish""",
+            description="""true = think and execute, false = finish.""",
             model_cls=NextStepInput,
             # return_direct=True,
             f=should_continue,

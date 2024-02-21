@@ -48,12 +48,12 @@ def jedi_name_to_symbol(name, context: ProjectContext) -> Symbol:
 
 def load_code(span: CodeSpan, context: ProjectContext):
     path = add_path_to_prefix(context.folder_path, span.file_path)
-    start = span.start_line
-    end = span.end_line
+    start = span.start_line - 1
+    end = span.end_line - 1
     with open(path, "r") as file:
         code = file.readlines()
         #    Get the code
-        return "".join(code[start - 1 : end + 1])
+        return "".join(code[start : end + 1])
 
 
 def add_line_numbers(code: str, starting_line: int) -> str:

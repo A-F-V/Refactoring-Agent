@@ -28,7 +28,7 @@ python-dotenv
 
 # Git Manipulation
 pygit2
-
+diff_match_patch
 # LSP
 jedi
 

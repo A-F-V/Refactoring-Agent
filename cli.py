@@ -41,7 +41,7 @@ def run(repo: str):
     click.echo("Running the demo")
 
     code_path = "edit_distance/edit_distance.py"
-    query = f"In the file {code_path}, get me line number of the function called `lowest_...` and tell me the return type.  Create a git diff to remove the docstring."
+    query = f"In the file {code_path}, there is  function called `lowest_...`. Edit the function by using better names for the variables. Do not rename the function"
 
     context = ProjectContext(folder_path=repo)
     agent = RefactoringAgent()

@@ -34,6 +34,13 @@ class Definition(BaseModel):
     span: CodeSpan = Field(description="The span of the definition")
 
 
+class CodeChange(BaseModel):
+    file: str = Field(description="The file to apply the change to.")
+    start_line: int = Field(description="The start line of the change.")
+    end_line: int = Field(description="The end line of the change exclusive.")
+    replacement_code: str = Field(description="The replacement code to apply.")
+
+
 ##########################################
 # State Defs
 

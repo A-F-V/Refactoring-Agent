@@ -63,5 +63,5 @@ class RefactoringAgent:
             "code_blocks": [],
             "thoughts": [],
         }
-        config = RunnableConfig(recursion_limit=10)
+        config = RunnableConfig(recursion_limit=20)
         return RefactoringAgentState(**self.app.invoke(state, config=config))

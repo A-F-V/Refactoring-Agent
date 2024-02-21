@@ -48,7 +48,11 @@ def record_to_str(record: ActionRecord) -> str:
     # Get the name of the type of record.result
     type_name = record["result"].__class__.__name__
     # check if request.result is a derived class of BaseModel
-    result_str = f"{type_name}({record['result']})"
+    # if type_name is str or int, then result_str is the value of record.result
+    if type_name == "str" or type_name == "int":
+        result_str = record["result"]
+    else:
+        result_str = f"{type_name}({record['result']})"
 
     return f"{{\"request\":{request_to_str(record['request'])},\"result\":\"{result_str}\"}}"
 
