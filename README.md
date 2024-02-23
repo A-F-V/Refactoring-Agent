@@ -1,3 +1,7 @@
+# Project Less
+
+![Photo](Less%20Code%20Example.PNG)
+
 # Setup
 
 ## Virtual Environment
