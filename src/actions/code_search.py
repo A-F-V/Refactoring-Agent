@@ -26,7 +26,7 @@ import os
 
 class SearchInput(BaseModel):
     query: str = Field(description="a symbol to search for in repository.")
-    fuzzy: bool = Field(description="whether to use fuzzy search", default=False)
+    # fuzzy: bool = Field(description="whether to use fuzzy search", default=False)
     file_path: Optional[str] = Field(
         description="whether to narrow the search to a specific file. If not provided, search the entire repository.",
         default=None,
@@ -39,7 +39,7 @@ def create_code_search():
         context = state["project_context"]
         folder_path = context.folder_path
         query = args.query
-        fuzzy = args.fuzzy
+        # fuzzy = args.fuzzy
         file_path = args.file_path
 
         # searcher
@@ -51,7 +51,7 @@ def create_code_search():
             path = os.path.join(folder_path, file_path)
             searcher = jedi.Script(path=path)
 
-        completions = list(searcher.complete_search(query, fuzzy=fuzzy))
+        completions = list(searcher.complete_search(query))
         symbols = [
             jedi_name_to_symbol(completion, context) for completion in completions
         ]

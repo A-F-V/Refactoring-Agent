@@ -7,7 +7,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/cli.py",
             "args": [
-                "run"
+                "run",
+                "What is the signature of the function beginning with 'lowest'"
             ],
             "justMyCode": true,
             "console": "integratedTerminal",
