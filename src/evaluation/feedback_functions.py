@@ -1,3 +1,4 @@
+from math import e
 from typing import Optional
 from trulens_eval import Feedback, Select
 from trulens_eval import Tru
@@ -37,7 +38,7 @@ def create_tool_relevance_feedback(state):
         tool_input = output["tool_input"]
         res = float(
             provider.endpoint.client.chat.completions.create(
-                model="gpt-3.5-turbo",  # Use better model?
+                model="gpt-4-1106-preview",
                 messages=[
                     {
                         "role": "system",
@@ -64,7 +65,7 @@ def create_tool_relevance_feedback(state):
 
 def create_short_thought_feedback():
     def short_thought(thought: str) -> float:
-        return float(len(thought))
+        return float(e ** (-float(len(thought)) * 0.003))
 
     return Feedback(short_thought).on_output()
 
@@ -73,17 +74,19 @@ def create_evolving_thought_feedback(state: RefactoringAgentState):
     def evolving_thought(thought: str):
         provider = fOpenAI()
         past_thoughts_actions = []
+        if len(state["history"]) == 0:
+            return 1.0
         for i in range(len(state["thoughts"]) - 1):
             past_thoughts_actions.append(
                 f"#T{i}: {state['thoughts'][i]}\n#A{i}: {record_to_str(state['history'][i])}"
             )
         res = float(
             provider.endpoint.client.chat.completions.create(
-                model="gpt-3.5-turbo",  # Use better model?
+                model="gpt-4-1106-preview",
                 messages=[
                     {
                         "role": "system",
-                        "content": "Given PAST_THOUGHTS_AND_ACTIONS, how much has the NEXT_THOUGHT added to solving the ULTIMATE_GOAL? Give a number between 0 to 100 where 100 means it has added a lot. Reply only with a number, for example: '80'",
+                        "content": "Given PAST_THOUGHTS_AND_ACTIONS, how much has the NEXT_THOUGHT added to solving the ULTIMATE_GOAL? Give a number between 0 to 1 where 1 means it has contributed to achieving the goal in its fullest. Reply only with a number, for example: '0.75'",
                     },
                     {
                         "role": "user",
@@ -100,30 +103,30 @@ def create_evolving_thought_feedback(state: RefactoringAgentState):
 
 
 def create_repeating_work_feedback(state: RefactoringAgentState):
-    def repeated_work(thought: str):
+    def no_repeated_work(thought: str):
         provider = fOpenAI()
         past_thoughts_actions = []
-        for i in range(len(state["thoughts"]) - 1):
-            past_thoughts_actions.append(
-                f"#T{i}: {state['thoughts'][i]}\n#A{i}: {record_to_str(state['history'][i])}"
-            )
+        if len(state["history"]) == 0:
+            return 1.0
+        for i in range(len(state["history"]) - 1):
+            past_thoughts_actions.append(f"#A{i}: {record_to_str(state['history'][i])}")
         res = float(
             provider.endpoint.client.chat.completions.create(
-                model="gpt-3.5-turbo",  # Use better model?
+                model="gpt-4-1106-preview",
                 messages=[
                     {
                         "role": "system",
-                        "content": "Given PAST_THOUGHTS_AND_ACTIONS, how much is the NEXT_THOUGHT suggesting we repeat work already completed? Give a number between 0 to 100 where 100 means it is suggesting a complete repeat of work already completed. Reply only with a number, for example: '80'",
+                        "content": "Given PAST_ACTIONS, how much is the NEXT_THOUGHT suggesting we repeat work already completed? Give a number between 0 to 1 where 1 means it is suggesting a full repeat of work already completed. Reply only with a number, for example: '0.5'",
                     },
                     {
                         "role": "user",
-                        "content": f"### PAST_THOUGHTS_AND_ACTIONS ###\n {past_thoughts_actions}\n\n\n ### NEXT_THOUGHT ###\n {thought}",
+                        "content": f"### PAST_ACTIONS ###\n {past_thoughts_actions}\n\n\n ### NEXT_THOUGHT ###\n {thought}",
                     },
                 ],
             )
             .choices[0]
             .message.content
         )
-        return res
+        return 1 - res
 
-    return Feedback(repeated_work).on_output()
+    return Feedback(no_repeated_work).on_output()

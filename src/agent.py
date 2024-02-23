@@ -37,7 +37,7 @@ class RefactoringAgent:
         action_list = self._create_refactoring_actions()
         self.graph = StateGraph(RefactoringAgentState)
 
-        self.graph.add_node("think", Thinker())  # Planner(action_list))
+        self.graph.add_node("think", Thinker(action_list))  # Planner(action_list))
         self.graph.add_node("execute", LLMExecutor(action_list))
         self.graph.add_node(
             "finish",

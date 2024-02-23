@@ -16,6 +16,10 @@ from src.utilities.jedi_utils import span_to_snippet
 ActionArgs = TypeVar("ActionArgs", bound=BaseModel)
 ActionReturnType = TypeVar("ActionReturnType")
 
+RED = "\033[91m"
+RESET = "\033[0m"
+GREEN = "\033[92m"
+
 
 class ActionRequest(TypedDict, Generic[ActionArgs]):
     id: str
@@ -41,7 +45,8 @@ class ActionRecord(TypedDict, Generic[ActionArgs, ActionReturnType]):
 
 
 def request_to_str(request: ActionRequest) -> str:
-    return f"{{\"name\":{request['id']},\"parameters\":{request['args']}}}"
+
+    return f"{{\"name\":{RED}{request['id']}{RESET},\"parameters\":{request['args']}}}"
 
 
 def record_to_str(record: ActionRecord) -> str:
@@ -54,7 +59,7 @@ def record_to_str(record: ActionRecord) -> str:
     else:
         result_str = f"{type_name}({record['result']})"
 
-    return f"{{\"request\":{request_to_str(record['request'])},\"result\":\"{result_str}\"}}"
+    return f"{{\"request\":{request_to_str(record['request'])},\"result\":{GREEN}\"{result_str}\"{RESET}}}"
 
 
 def feedback_to_str(feedback: FeedbackMessage) -> str:

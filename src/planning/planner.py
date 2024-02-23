@@ -48,7 +48,7 @@ class NewThought(BaseModel):
 
 
 class Thinker:
-    def __init__(self):
+    def __init__(self, action_list):
 
         def create_thought():
 
@@ -64,8 +64,16 @@ class Thinker:
             )
             return action
 
+        action_ids = ["- " + action.id for action in action_list]
+        action_str = "\n".join(action_ids)
+
         task = """Reflect on the current state and write a brief thought to help your future self."""
-        additional_instructions = """Use this as a way to plan your next steps, reflect on what went well and how you can improve. Be incredibly brief (1-2 sentences). This message will be saved in the thoughts section. Do not prefix your answer."""
+        # old_instruction additional_instructions = """Use this as a way to plan your next steps, reflect on what went well and how you can improve. Be incredibly brief (1-2 sentences). This message will be saved in the thoughts section. Do not prefix your answer."""
+        additional_instructions = f"""Use this as a way to plan your next steps, reflect on what went well and how you can improve. Be incredibly brief (try to use fewer than 150 characters), mentioning only the most relevant and salient points, paraphrasing in a semi-colon seperated list. For example: 'do X; avoid Y; consider Z.'
+For reference, the available actions are:
+{action_str}
+Reason in terms of these symbols.
+        """
 
         def eval_think_factory(state: RefactoringAgentState):
             return [
@@ -87,6 +95,7 @@ class Thinker:
         state, result = self.controller.run(state)
         args = NewThought(thought=str(result))
         self.add_thought.execute(state, args)
+        print("Thought added to the thoughts list")
         return state
 
 
@@ -101,7 +110,7 @@ class NextStep(Enum):
 
 class NextStepInput(BaseModel):
     should_continue: bool = Field(
-        description="Whether we should do another 'think-executee' (true) loop or finish (false)."
+        description="Whether we should do another 'think-execute' (true) loop or finish (false)."
     )
 
 
@@ -140,17 +149,21 @@ class ShouldContinue:
         return action
 
     def __call__(self, state: RefactoringAgentState):
-        state, decision = self.controller.run(state)
-        # Parse the decision
-        cont = bool(str(decision).lower())
-        return "think" if cont else "finish"
+        for retry in range(3):
+            state, decision = self.controller.run(state)
+            # Parse the decision
+            if decision == "true":
+                return "think"
+            elif decision == "false":
+                return "finish"
+
+        raise Exception("Failed to parse the decision")
 
 
 class LLMExecutor:
     def __init__(self, action_list: List[Action]):
         task = """Select the next actions to execute."""
-        additional_instructions = """You will be allowed to execute actions in the future, so do not worry about executing all the actions at once.
-        Call any of the available functions. Say 'Done' after you are done invoking functions."""
+        additional_instructions = """You will be allowed to execute actions in the future, so do not worry about executing all the actions at once. **Execute only one function**.. Say 'Done' after you are done invoking the function."""
         self.executor = LLMController(
             action_list,
             task,
