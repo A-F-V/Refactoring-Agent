@@ -35,17 +35,18 @@ def init_repo(repo: str, folder: str):
 
 
 @click.command()
+@click.argument("query")
 @click.option("--repo", default="./demo", help="The repo to download")
-def run(repo: str):
+def run(query, repo: str):
 
-    click.echo("Running the demo")
+    # click.echo("Running the demo")
 
-    code_path = "edit_distance/edit_distance.py"
-    query = f"In the file {code_path}, there is  function called `lowest_...`. Edit the function by using better names for the variables. Do not rename the function"
+    # code_path = "edit_distance/edit_distance.py"
+    # query = f"In the file {code_path}, there is  function called `lowest_...`. Edit the function by using better names #for the variables. Do not rename the function"
 
     context = ProjectContext(
         folder_path=repo,
-        eval_project_id="demo_eval_short_thoughts_with_action_groundedness",
+        eval_project_id="demo",
     )
     agent = RefactoringAgent()
     click.echo(state_to_str(agent.run(query, context)))

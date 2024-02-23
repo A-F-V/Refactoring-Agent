@@ -2,9 +2,9 @@
 
 ![Photo](Less%20Code%20Example.PNG)
 
-# Setup
+# Running
 
-## Virtual Environment
+## Install
 
 ```bash
 python -m venv venv
@@ -12,7 +12,13 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Development
+## Running
+
+    ```bash
+    python cli.py <query> --repo <path to repo you want to execute agent on>
+    ```
+
+# Development
 
 ### VSCode Plugins
 
