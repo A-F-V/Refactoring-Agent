@@ -3,6 +3,11 @@ from typing import List
 from src.actions.action import Action, FeedbackMessage
 from src.actions.basic_actions import create_logging_action
 from src.common.definitions import FailureReason
+from src.evaluation.feedback_functions import (
+    create_evolving_thought_feedback,
+    create_repeating_work_feedback,
+    create_short_thought_feedback,
+)
 from src.execution import ActionDispatcher, LLMController
 from src.planning.plan_actions import (
     create_action_adder_for_plan,
@@ -38,14 +43,14 @@ class Planner:
         return self.controller(state)
 
 
+class NewThought(BaseModel):
+    thought: str = Field(description="The thought to add to the thoughts list")
+
+
 class Thinker:
     def __init__(self):
 
         def create_thought():
-            class NewThought(BaseModel):
-                thought: str = Field(
-                    description="The thought to add to the thoughts list"
-                )
 
             def thought(state: RefactoringAgentState, args: NewThought):
                 state["thoughts"].append(args.thought)
@@ -60,17 +65,29 @@ class Thinker:
             return action
 
         task = """Reflect on the current state and write a brief thought to help your future self."""
-        additional_instructions = """Use this as a way to plan your next steps, reflect on what went well and how you can improve. Be incredibly brief (1-2 sentences). 
-        Call the add_thought function to add a thought to the thoughts list. Say 'Done' after you have added your thought."""
+        additional_instructions = """Use this as a way to plan your next steps, reflect on what went well and how you can improve. Be incredibly brief (1-2 sentences). This message will be saved in the thoughts section. Do not prefix your answer."""
+
+        def eval_think_factory(state: RefactoringAgentState):
+            return [
+                create_evolving_thought_feedback(state),
+                create_short_thought_feedback(),
+                create_repeating_work_feedback(state),
+            ]
+
+        self.add_thought = create_thought()
         self.controller = LLMController(
-            [create_thought()],
+            [],
             task,
             additional_instructions=additional_instructions,
             record_history=False,
+            eval_factory=eval_think_factory,
         )
 
     def __call__(self, state: RefactoringAgentState):
-        return self.controller(state)
+        state, result = self.controller.run(state)
+        args = NewThought(thought=str(result))
+        self.add_thought.execute(state, args)
+        return state
 
 
 class NextStep(Enum):
@@ -92,11 +109,13 @@ class ShouldContinue:
     next_node: str
 
     def __init__(self) -> None:
-        should_continue_action = self._create_should_continue_action()
+        self.should_continue_action = self._create_should_continue_action()
         task = """Decide whether to think & execute again or finish. """
-        additional_instructions = """Call the `should_continue` function with a true boolean to continue thinking & executing, and false to finish. Say 'Done' after you have called `should_continue`. Call `should_continue` only once."""
+        additional_instructions = (
+            """Return 'true' to think and execute again, or 'false' to finish."""
+        )
         self.controller = LLMController(
-            [should_continue_action],
+            [],
             task,
             additional_instructions=additional_instructions,
             record_history=False,
@@ -122,7 +141,9 @@ class ShouldContinue:
 
     def __call__(self, state: RefactoringAgentState):
         state, decision = self.controller.run(state)
-        return self.next_node
+        # Parse the decision
+        cont = bool(str(decision).lower())
+        return "think" if cont else "finish"
 
 
 class LLMExecutor:

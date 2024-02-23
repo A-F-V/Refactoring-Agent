@@ -1,6 +1,3 @@
-from langchain import hub
-from langchain.agents import AgentExecutor, create_openai_functions_agent
-from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 from src.actions.code_inspection import create_code_loader
 from src.actions.code_manipulation import create_apply_change
@@ -13,6 +10,10 @@ from .execution import ActionDispatcher, ExecutePlan, ExecuteTopOfPlan, LLMContr
 from .actions.basic_actions import create_logging_action
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableConfig
+from trulens_eval import Tru
+from langchain import hub
+from langchain.agents import AgentExecutor, create_openai_functions_agent
+from langchain_openai import ChatOpenAI
 
 
 class RefactoringAgent:
@@ -52,7 +53,11 @@ class RefactoringAgent:
         # self.graph.add_node('')
         self.app = self.graph.compile()
 
+        # print the graph
+        # TODO
+
     def run(self, inp: str, context: ProjectContext) -> RefactoringAgentState:
+        tru = Tru()
         state: RefactoringAgentState = {
             "goal": inp,
             "project_context": context,
@@ -63,5 +68,7 @@ class RefactoringAgent:
             "code_blocks": [],
             "thoughts": [],
         }
-        config = RunnableConfig(recursion_limit=20)
-        return RefactoringAgentState(**self.app.invoke(state, config=config))
+        config = RunnableConfig(recursion_limit=30)
+        result = RefactoringAgentState(**self.app.invoke(state, config=config))
+        # tru.stop_dashboard()
+        return result

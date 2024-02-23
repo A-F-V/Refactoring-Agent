@@ -1,0 +1,10 @@
+{'name': None,
+ 'first': RunnableAssign(mapper=
+ {
+  agent_scratchpad: RunnableLambda(lambda x: format_to_openai_tool_messages(x['intermediate_steps']))
+}),
+ 'middle': [
+  ChatPromptTemplate(input_variables=['agent_scratchpad', 'input'], input_types={'chat_history': typing.List[typing.Union[langchain_core.messages.ai.AIMessage, langchain_core.messages.human.HumanMessage, langchain_core.messages.chat.ChatMessage, langchain_core.messages.system.SystemMessage, langchain_core.messages.function.FunctionMessage, langchain_core.messages.tool.ToolMessage]], 'agent_scratchpad': typing.List[typing.Union[langchain_core.messages.ai.AIMessage, langchain_core.messages.human.HumanMessage, langchain_core.messages.chat.ChatMessage, langchain_core.messages.system.SystemMessage, langchain_core.messages.function.FunctionMessage, langchain_core.messages.tool.ToolMessage]]}, messages=[SystemMessagePromptTemplate(prompt=PromptTemplate(input_variables=[], template='You are a helpful assistant')), MessagesPlaceholder(variable_name='chat_history', optional=True), HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=['input'], template='{input}')), MessagesPlaceholder(variable_name='agent_scratchpad')]),
+  RunnableBinding(bound=ChatOpenAI(client=<openai.resources.chat.completions.Completions object at 0x000001B5C2A23950>, async_client=<openai.resources.chat.completions.AsyncCompletions object at 0x000001B5C2A3C250>, model_name='gpt-4-1106-preview', openai_api_key=SecretStr('**********'), openai_proxy=''), kwargs={'tools': [{'type': 'function', 'function': {'name': 'add_thought', 'description': 'Add a thought to the thoughts list.', 'parameters': {'type': 'object', 'properties': {'thought': {'description': 'The thought to add to the thoughts list', 'type': 'string'}}, 'required': ['thought']}}}]})]
+ , 
+ 'last': OpenAIToolsAgentOutputParser()}

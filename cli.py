@@ -43,7 +43,7 @@ def run(repo: str):
     code_path = "edit_distance/edit_distance.py"
     query = f"In the file {code_path}, there is  function called `lowest_...`. Edit the function by using better names for the variables. Do not rename the function"
 
-    context = ProjectContext(folder_path=repo)
+    context = ProjectContext(folder_path=repo, eval_project_id="demo_eval")
     agent = RefactoringAgent()
     click.echo(state_to_str(agent.run(query, context)))
 

@@ -1,4 +1,7 @@
 
+trulens_eval
+litellm
+boto3
 # For linting
 pylint
 
@@ -12,7 +15,7 @@ pytest
 sphinx
 
 # For Type Checking
-mypy
+#mypy
 
 #########################
 
@@ -32,3 +35,4 @@ diff_match_patch
 # LSP
 jedi
 
+# Evaluation

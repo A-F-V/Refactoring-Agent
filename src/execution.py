@@ -2,6 +2,7 @@ import json
 from typing import Dict, List
 from langchain_openai import ChatOpenAI
 from langchain_core.utils.function_calling import convert_to_openai_function
+from trulens_eval import FeedbackMode, TruChain
 
 from langchain.prompts import (
     PromptTemplate,
@@ -12,6 +13,7 @@ from langchain.prompts import (
 )
 from langchain.output_parsers.openai_tools import JsonOutputToolsParser
 from langchain_core.output_parsers import JsonOutputParser
+from langchain.agents import initialize_agent, AgentType
 from langchain import hub
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from src.actions.action import Action
@@ -28,6 +30,8 @@ from src.planning.state import (
     state_to_str,
 )
 from src.utilities.formatting import format_list
+from .evaluation.feedback_functions import *
+from trulens_eval.app import App
 
 
 class ActionDispatcher:
@@ -142,6 +146,7 @@ class LLMController:
         current_task: str,
         verbose=True,
         additional_instructions=default_instructions,
+        eval_factory=None,
         record_history=True,
     ):
         self.actions = actions
@@ -150,6 +155,8 @@ class LLMController:
         self.verbose = verbose
         self.additional_instructions = additional_instructions
         self.record_history = record_history
+        self.eval_factory = eval_factory
+
         self.create_prompt()
         # self.chain = self.prompt_template | self.llm | self.parser
 
@@ -208,7 +215,18 @@ class LLMController:
             return self.run_with_tools(state)
 
     def run_without_tools(self, state):
-        output = self.llm.invoke(self.format_context_prompt(state))
+        self.llm = ChatOpenAI(model="gpt-4-1106-preview")
+        if self.eval_factory is not None:
+
+            tru_llm = TruChain(
+                self.llm,
+                app_id=state["project_context"].eval_project_id,
+                feedbacks=self.eval_factory(state),
+            )
+            with tru_llm:
+                output = self.llm.invoke(self.format_context_prompt(state))
+        else:
+            output = self.llm.invoke(self.format_context_prompt(state))
         return state, output.content
 
     def run_with_tools(self, state):
@@ -216,13 +234,17 @@ class LLMController:
 
         # Construct the OpenAI Tools agent
         agent = create_openai_tools_agent(self.llm, tools, self.agent_prompt)
-        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=self.verbose)
-        # Decide what to do
-        if self.verbose:
-            # print("Action List:")
-            # print("\n".join([str(action) for action in self.actions]))
-            # print("----")
-            pass
+        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False)
+
+        #  tru_agent = TruChain(
+        #      agent,
+        #      app_id=state["project_context"].eval_project_id,
+        #      feedbacks=[
+        #          # create_tool_relevance_feedback(state)
+        #      ],
+        #      # feedback_mode=FeedbackMode.DEFERRED,
+        #  )
+        # print(tru_agent.app.middle[1])
         output = ""
         try:
             try:
@@ -230,6 +252,7 @@ class LLMController:
                     {"input": self.format_context_prompt(state)}
                 )
                 output = result["output"]
+
             except Exception as e:
                 raise FeedbackMessage(FailureReason.ACTION_FAILED, str(e))
         except FeedbackMessage as f:

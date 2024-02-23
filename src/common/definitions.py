@@ -12,6 +12,7 @@ class ProjectContext(BaseModel):
     """A project context."""
 
     folder_path: str = Field(description="The folder path of the project")
+    eval_project_id: str = Field(description="The project id")
 
 
 ###########################################
